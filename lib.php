@@ -139,7 +139,7 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
         }
         return $output.'<br/>';
     }
-    public function get_quiz_links($question, $state, $cmoptions, $options) {
+    /*public function get_quiz_links($question, $state, $cmoptions, $options) {
         //print_object($question);
                 print_object($state);
                         print_object($cmoptions);
@@ -158,7 +158,7 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
                 print_object($plagiarismfile);
         }
         return "";
-    }
+    }*/
     public function save_form_elements($data) {
             global $DB;
         if (!$this->get_settings()) {
@@ -333,7 +333,7 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
      * used by admin/cron.php to get similarity scores from submitted files.
      *
      */
-    public function cron() {
+    public function plagiarism_cron() {
         $plagiarismsettings = $this->get_settings();
         if ($plagiarismsettings) {
             turnitin_get_scores($plagiarismsettings);
