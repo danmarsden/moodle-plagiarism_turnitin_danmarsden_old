@@ -274,8 +274,19 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
         if (!$plagiarismsettings = $this->get_settings()) {
             return;
         }
-        //TODO: This call degrades page performance - need to run less frequently.
         $tii = array();
+        //print link to teacher login
+        $tii['fcmd'] = TURNITIN_LOGIN; //when set to 2 this returns XML
+        $tii['utp'] = TURNITIN_INSTRUCTOR;
+        $tii['fid'] = TURNITIN_CREATE_USER; //set commands - Administrator login/statistics.
+        $tii = turnitin_get_tii_user($tii, $USER, $plagiarismsettings);
+        echo '<div style="text-align:right"><a href="'.turnitin_get_url($tii, $plagiarismsettings).'" target="_blank">'.get_string("teacherlogin","plagiarism_turnitin").'</a></div>';
+
+
+        //TODO: This call degrades page performance - need to run less frequently.
+        if (empty($plagiarismsettings['turnitin_enablegrademark'])) {
+            return;
+        }
         $tii['utp']      = TURNITIN_INSTRUCTOR;
         $tii = turnitin_get_tii_user($tii, $USER, $plagiarismsettings);
         $courseshortname = (strlen($course->shortname) > 70 ? substr($course->shortname, 0, 70) : $course->shortname); //shouldn't happen but just in case!
@@ -286,9 +297,7 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
         //$tii['diagnostic'] = '1';
         $tiixml = plagiarism_get_xml(turnitin_get_url($tii, $plagiarismsettings));
         //currently only used for grademark - check if enabled and return if not.
-        if (empty($plagiarismsettings['turnitin_enablegrademark'])) {
-            return;
-        }
+
         if (!$moduletype = $DB->get_field('modules','name', array('id'=>$cm->module))) {
             debugging("invalid moduleid! - moduleid:".$cm->module." Module:".$moduletype);
             continue;
