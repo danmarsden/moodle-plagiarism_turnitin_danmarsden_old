@@ -695,7 +695,7 @@ function turnitin_send_file($pid, $plagiarismsettings, $file) {
     //get information about this file
     $plagiarism_file = $DB->get_record('plagiarism_files', array('id'=>$pid));
     $plagiarism_file->fileobject = $file; //store fileobject for use in submission.
-
+    //TODO: probably shouldn't use continue statements here anymore - maybe delete turnitin record as users/courses/modules have possibly been deleted?
     if (!$user = $DB->get_record('user', array('id'=>$plagiarism_file->userid))) {
         debugging("invalid userid! - userid:".$plagiarism_file->userid." Module:".$moduletype." Fileid:".$plagiarism_file->id);
         continue;
@@ -716,7 +716,11 @@ function turnitin_send_file($pid, $plagiarismsettings, $file) {
         debugging("invalid instanceid! - instance:".$cm->instance." Module:".$moduletype." Fileid:".$plagiarism_file->id);
         continue;
     }
-
+    $dtstart = $DB->get_record('plagiarism_config', array('cm'=>$cm->id, 'name'=>'turnitin_dtstart'));
+    if (!empty($dtstart) && $dtstart->value+600 > time()) {
+        mtrace("Warning: assignment start date is too early ".date('Y-m-d H:i:s', $dtstart->value)." in course $course->shortname assignment $module->name will delay sending files until next cron");
+        return false; //TODO: check that this doesn't cause a failure in cron
+    }
     //Start Turnitin Session
     $tiisession = turnitin_start_session($user, $plagiarismsettings);
     //now send the file.
@@ -944,23 +948,70 @@ function turnitin_update_assignment($plagiarismsettings, $plagiarismvalues, $eve
             $tii['ptype']    = TURNITIN_TYPE_FILE; //filetype
             $tii['pfn']      = $tii['ufn'];
             $tii['pln']      = $tii['uln'];
-            if (!empty($module->timeavailable)) {
-                $tii['dtstart']  = rawurlencode(gmdate('Y-m-d H:i:s', $module->timeavailable));
+            $dtstart = time(); //default start time if not set or can't use. - use 30min earlier than now to allow TII to accept files now.
+            if (!empty($plagiarismvalues['turnitin_dtstart'])) {
+                //check to see if $module->timeavailable is set and is later than $plagiarismvalues['turnitin_dtstart']
+                //if so, we can use the date set in $module->timeavailable - this would happen if the date was changed in Moodle.
+                if (!empty($module->timeavailable) && $module->timeavailable > $plagiarismvalues['turnitin_dtstart']) {
+                    $tii['dtstart']  = rawurlencode(date('Y-m-d H:i:s', $module->timeavailable));
+                    $dtstart = $module->timeavailable;
+                    //now update dtstart in config table
+                    $configval = $DB->get_record('plagiarism_config', array('cm'=>$cm->id, 'name'=>'turnitin_dtstart'));
+                    $configval->value = $dtstart;
+                    $DB->update_record('plagiarism_config', $configval);
+                } else {
+                    //need to use existing stored date - we can't use a date earlier than the date the assignment in Turnitin was created.
+                    $tii['dtstart']  = rawurlencode(date('Y-m-d H:i:s', $plagiarismvalues['turnitin_dtstart']));
+                    $dtstart = $plagiarismvalues['turnitin_dtstart'];
+                }
             } else {
-                $tii['dtstart']  = rawurlencode(gmdate('Y-m-d H:i:s', time()));
+                if (!empty($module->timeavailable) && $module->timeavailable > $dtstart) { //Turnitin doesn't allow the dtstart to be earlier than the creation date.
+                    $tii['dtstart']  = rawurlencode(date('Y-m-d H:i:s',  $module->timeavailable));
+                    $dtstart = $module->timeavailable;
+                } else {
+                    $tii['dtstart']  = rawurlencode(date('Y-m-d H:i:s', $dtstart));
+                }
+                //now save dtstart into config table
+                $configval = new stdclass();
+                $configval->cm = $cm->id;
+                $configval->name = 'turnitin_dtstart';
+                $configval->value = $dtstart;
+                $DB->insert_record('plagiarism_config', $configval);
             }
-            if (!empty($module->timedue)) {
-                $tii['dtdue']    = rawurlencode(gmdate('Y-m-d H:i:s', $module->timedue)); //set to 1 day in future from date due.
+            $dtdue = $dtstart+ (30 * 24 * 60 * 60); //default date due if not set or invalid
+            if (!empty($module->timedue) && $module->timedue > $dtstart) { //dtdue must be greater that dtstart
+                $tii['dtdue']    = rawurlencode(date('Y-m-d H:i:s', $module->timedue));
+                $dtdue = $module->timedue;
+            } elseif (!empty($plagiarismvalues['turnitin_dtdue'])) {
+                $dtdue = $plagiarismvalues['turnitin_dtdue'];
+                $tii['dtdue']    = rawurlencode(date('Y-m-d H:i:s', $plagiarismvalues['turnitin_dtdue']));
             } else {
-                $tii['dtdue']    = rawurlencode(gmdate('Y-m-d H:i:s', time()+ (30 * 24 * 60 * 60))); //set to 30 days in future if not set by the module.
+                $tii['dtdue']    = rawurlencode(date('Y-m-d H:i:s', $dtdue));
             }
+            if (isset($plagiarismvalues['turnitin_dtdue'])) {
+                $configval = $DB->get_record('plagiarism_config', array('cm'=>$cm->id, 'name'=>'turnitin_dtdue'));
+                $configval->value = $dtdue;
+                $DB->update_record('plagiarism_config', $configval);
+            } else {
+                //now save dtdue into config table
+                $configval = new stdclass();
+                $configval->cm = $cm->id;
+                $configval->name = 'turnitin_dtdue';
+                $configval->value = $dtdue;
+                $DB->insert_record('plagiarism_config', $configval);
+            }
+
             $tii['late_accept_flag']  = (empty($module->preventlate) ? '1' : '0');
-            $tii['s_view_report']     = (empty($plagiarismvalues['plagiarism_show_student_report']) ? '0' : '1'); //allow students to view the full report.
-            $tii['s_paper_check']     = (isset($plagiarismvalues['plagiarism_compare_student_papers']) ? $plagiarismvalues['plagiarism_compare_student_papers'] : '0');
-            $tii['internet_check']    = (isset($plagiarismvalues['plagiarism_compare_internet']) ? $plagiarismvalues['plagiarism_compare_internet'] : '0');
-            $tii['journal_check']     = (isset($plagiarismvalues['plagiarism_compare_journals']) ? $plagiarismvalues['plagiarism_compare_journals'] : '0');
+            if (isset($plagiarismvalues['plagiarism_show_student_report'])) {
+                $tii['s_view_report']     = (empty($plagiarismvalues['plagiarism_show_student_report']) ? '0' : '1'); //allow students to view the full report.
+            } else {
+                $tii['s_view_report']     = '1';
+            }
+            $tii['s_paper_check']     = (isset($plagiarismvalues['plagiarism_compare_student_papers']) ? $plagiarismvalues['plagiarism_compare_student_papers'] : '1');
+            $tii['internet_check']    = (isset($plagiarismvalues['plagiarism_compare_internet']) ? $plagiarismvalues['plagiarism_compare_internet'] : '1');
+            $tii['journal_check']     = (isset($plagiarismvalues['plagiarism_compare_journals']) ? $plagiarismvalues['plagiarism_compare_journals'] : '1');
             $tii['institution_check'] = (isset($plagiarismvalues['plagiarism_compare_institution']) && get_config('plagiarism', 'turnitin_institutionnode') ? $plagiarismvalues['plagiarism_compare_institution'] : '0');
-            $tii['report_gen_speed']  = (isset($plagiarismvalues['plagiarism_report_gen']) ? $plagiarismvalues['plagiarism_report_gen'] : '0');
+            $tii['report_gen_speed']  = (isset($plagiarismvalues['plagiarism_report_gen']) ? $plagiarismvalues['plagiarism_report_gen'] : '1');
             $tii['exclude_biblio']    = (isset($plagiarismvalues['plagiarism_exclude_biblio']) ? $plagiarismvalues['plagiarism_exclude_biblio'] : '0');
             $tii['exclude_quoted']    = (isset($plagiarismvalues['plagiarism_exclude_quoted']) ? $plagiarismvalues['plagiarism_exclude_quoted'] : '0');
             $tii['exclude_type']      = (isset($plagiarismvalues['plagiarism_exclude_matches']) ? $plagiarismvalues['plagiarism_exclude_matches'] : '0');
@@ -981,6 +1032,7 @@ function turnitin_update_assignment($plagiarismsettings, $plagiarismvalues, $eve
                 mtrace("Error: could not create assignment in class statuscode:".$tiixml->rcode[0]);
                 $return = false;
             }
+            //save assid for use later.
             if (!empty($tiixml->assignmentid[0])) {
                 if (empty($plagiarismvalues['turnitin_assignid'])) {
                     $configval = new stdclass();
@@ -1229,4 +1281,28 @@ function turnitin_get_tii_user($tii, $user, $plagiarismsettings) {
     $tii['uid']      = $user->username;
 
     return $tii;
+}
+
+function turnitin_event_file_uploaded($eventdata) {
+    $eventdata->eventtype = 'file_uploaded';
+    return Turnitin::event_handler($eventdata);
+}
+function turnitin_event_files_done($eventdata) {
+    $eventdata->eventtype = 'files_done';
+    return Turnitin::event_handler($eventdata);
+}
+
+function turnitin_event_mod_created($eventdata) {
+    $eventdata->eventtype = 'mod_created';
+    return Turnitin::event_handler($eventdata);
+}
+
+function turnitin_event_mod_updated($eventdata) {
+    $eventdata->eventtype = 'mod_updated';
+    return Turnitin::event_handler($eventdata);
+}
+
+function turnitin_event_mod_deleted($eventdata) {
+    $eventdata->eventtype = 'mod_deleted';
+    return Turnitin::event_handler($eventdata);
 }
