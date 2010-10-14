@@ -340,27 +340,32 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
         }
     }
     public function event_handler($eventdata) {
-        print_object($eventdata);
-        error("here");
         global $DB, $CFG;
         $result = true;
+        print_object($eventdata);
+        $supportedmodules = array('assignment', 'quiz');
+        if (empty($eventdata->modulename) || !in_array($eventdata->modulename, $supportedmodules)) {
+            debugging("this module isn't handled:".$eventdata->modulename); //TODO: remove this debug when working.
+            return true;
+        }
+        
         $plagiarismsettings = $this->get_settings();
-        $cmid = (!empty($eventdata->cm->id)) ? $eventdata->cm->id : $eventdata->cm;
+        $cmid = (!empty($eventdata->cm->id)) ? $eventdata->cm->id : $eventdata->cmid;
         $plagiarismvalues = $DB->get_records_menu('plagiarism_config', array('cm'=>$cmid),'','name,value');
         if (!$plagiarismsettings || empty($plagiarismvalues['use_turnitin'])) {
             //nothing to do here... move along!
             return $result;
         }
 
-        if ($type == "create") {
+        if ($eventdata->eventtype == "mod_created") {
             return turnitin_update_assignment($plagiarismsettings, $plagiarismvalues, $eventdata, 'create');
-        } else if ($type=="update") {
+        } else if ($eventdata->eventtype=="mod_updated") {
             return  turnitin_update_assignment($plagiarismsettings, $plagiarismvalues, $eventdata, 'update');
-        } else if ($type=="delete") {
+        } else if ($eventdata->eventtype=="mod_deleted") {
            return  turnitin_update_assignment($plagiarismsettings, $plagiarismvalues, $eventdata, 'delete');
-        } else if ($type=="filesubmission") {
+        } else if ($eventdata->eventtype=="file_uploaded") {
             // check if the module associated with this event still exists
-            if (!$DB->record_exists('course_modules', array('id' => $eventdata->cm->id))) {
+            if (!$DB->record_exists('course_modules', array('id' => $eventdata->cmid))) {
                 return $result;
             }
             if (!empty($eventdata->file)) { //this is an upload event.
@@ -378,9 +383,9 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
                 if (isset($plagiarismvalues['plagiarism_draft_submit']) && $plagiarismvalues['plagiarism_draft_submit'] == 1) { // is file to be sent on final submission?
                     // we need to get a list of files attached to this assignment and put them in an array, so that
                     // we can submit each of them for processing.
-                    $modulecontext = get_context_instance(CONTEXT_MODULE, $eventdata->cm->id);
+                    $modulecontext = get_context_instance(CONTEXT_MODULE, $eventdata->cmid);
                     $fs = get_file_storage();
-                    if ($files = $fs->get_area_files($modulecontext->id, 'assignment_submission', $eventdata->user->id, "timemodified", false)) {
+                    if ($files = $fs->get_area_files($modulecontext->id, 'assignment_submission', $eventdata->userid, "timemodified", false)) {
                         foreach ($files as $file) {
                             //TODO: need to check if this file has already been sent! - possible that the file was sent before draft submit was set.
                             $eventdata->file = $file;
@@ -391,7 +396,7 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
                 }
             }
             return $result;
-        } else if ($type=="quizattempt") {
+        } else if ($eventdata->eventtype=="quizattempt") {
             //get list of essay questions and the users answer in this quiz
             $sql = "SELECT s.* FROM {question} q, {quiz_question_instances} i, {question_states} s, {question_sessions} qs
                     WHERE i.quiz = ? AND i.quiz=q.id AND q.qtype='essay'
@@ -421,6 +426,8 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
                 unlink($file->filepath); //delete temp file.
             }
             return true;
+        } else {
+            //return true; //Don't need to handle this event
         }
     }
 }
@@ -882,31 +889,31 @@ function turnitin_update_assignment($plagiarismsettings, $plagiarismvalues, $eve
         return true;
     }
     //first set up this assignment/assign the global teacher to this course.
-    $course = $DB->get_record('course',  array('id'=>$eventdata->course));
+    $course = $DB->get_record('course',  array('id'=>$eventdata->courseid));
     if (empty($course)) {
         debugging("couldn't find course record - might have been deleted?", DEBUG_DEVELOPER);
         return true; //don't let this event kill cron
     }
-    if (!$cm = $DB->get_record('course_modules', array('id'=>$eventdata->cm))) {
-        debugging("invalid cmid! - might have been deleted?".$eventdata->cm, DEBUG_DEVELOPER);
-        return true; //don't let this event kill cron
-    }
-    if (!$moduletype = $DB->get_field('modules','name', array('id'=>$cm->module))) {
-        debugging("invalid moduleid! - moduleid:".$cm->module." Module:".$moduletype, DEBUG_DEVELOPER);
-        return true; //don't let this event kill cron
-    }
-    if (!$module = $DB->get_record($moduletype, array('id'=>$cm->instance))) {
-        debugging("invalid instanceid! - instance:".$cm->instance." Module:".$moduletype, DEBUG_DEVELOPER);
+    if (!$cm = $DB->get_record('course_modules', array('id'=>$eventdata->cmid))) {
+        debugging("invalid cmid! - might have been deleted?".$eventdata->cmid, DEBUG_DEVELOPER);
         return true; //don't let this event kill cron
     }
 
-    $tiisession = turnitin_start_session($eventdata->user, $plagiarismsettings);
+    if (!$module = $DB->get_record($eventdata->modulename, array('id'=>$cm->instance))) {
+        debugging("invalid instanceid! - instance:".$cm->instance." Module:".$moduletype, DEBUG_DEVELOPER);
+        return true; //don't let this event kill cron
+    }
+    if (!$user = $DB->get_record('user', array('id'=>$eventdata->userid))) {
+        debugging("invalid userid! - :".$eventdata->userid." Module:".$moduletype, DEBUG_DEVELOPER);
+        return true; //don't let this event kill cron
+    }
+    $tiisession = turnitin_start_session($user, $plagiarismsettings);
     if ($action=='create' or $action=='update') { //TODO: split this into 2 - we don't need to call the create if we know it already exists.
         $tii = array();
         //set globals.
         $courseshortname = (strlen($course->shortname) > 70 ? substr($course->shortname, 0, 70) : $course->shortname); //shouldn't happen but just in case!
         $tii['utp']      = TURNITIN_INSTRUCTOR;
-        $tii = turnitin_get_tii_user($tii, $eventdata->user, $plagiarismsettings);
+        $tii = turnitin_get_tii_user($tii, $user, $plagiarismsettings);
         $tii['session-id'] = $tiisession;
         $tii['ctl']      = $plagiarismsettings['turnitin_courseprefix'].$course->id.$courseshortname; //Course title.  -this uses Course->id and shortname to ensure uniqueness.
         if (get_config('plagiarism_turnitin_course', $course->id)) {
@@ -1036,12 +1043,12 @@ function turnitin_update_assignment($plagiarismsettings, $plagiarismvalues, $eve
             if (!empty($tiixml->assignmentid[0])) {
                 if (empty($plagiarismvalues['turnitin_assignid'])) {
                     $configval = new stdclass();
-                    $configval->cm = $eventdata->cm;
+                    $configval->cm = $cm->id;
                     $configval->name = 'turnitin_assignid';
                     $configval->value = $tiixml->assignmentid[0];
                     $DB->insert_record('plagiarism_config', $configval);
                 } else {
-                    $configval = $DB->get_record('plagiarism_config', array('cm'=> $eventdata->cm, 'name'=> 'turnitin_assignid'));
+                    $configval = $DB->get_record('plagiarism_config', array('cm'=> $cm->id, 'name'=> 'turnitin_assignid'));
                     $configval->value = $tiixml->assignmentid[0];
                     $DB->update_record('plagiarism_config', $configval);
                 }
@@ -1051,7 +1058,7 @@ function turnitin_update_assignment($plagiarismsettings, $plagiarismvalues, $eve
             $return = false;
         }
     }
-    turnitin_end_session($eventdata->user, $plagiarismsettings, $tiisession);
+    turnitin_end_session($user, $plagiarismsettings, $tiisession);
     return $result;
 }
 
@@ -1285,24 +1292,29 @@ function turnitin_get_tii_user($tii, $user, $plagiarismsettings) {
 
 function turnitin_event_file_uploaded($eventdata) {
     $eventdata->eventtype = 'file_uploaded';
-    return plagiarism_plugin_turnitin::event_handler($eventdata);
+    $turnitin = new plagiarism_plugin_turnitin();
+    return $turnitin->event_handler($eventdata);
 }
 function turnitin_event_files_done($eventdata) {
-    $eventdata->eventtype = 'files_done';
-    return plagiarism_plugin_turnitin::event_handler($eventdata);
+    $eventdata->eventtype = 'file_uploaded';
+    $turnitin = new plagiarism_plugin_turnitin();
+    return $turnitin->event_handler($eventdata);
 }
 
 function turnitin_event_mod_created($eventdata) {
     $eventdata->eventtype = 'mod_created';
-    return plagiarism_plugin_turnitin::event_handler($eventdata);
+    $turnitin = new plagiarism_plugin_turnitin();
+    return $turnitin->event_handler($eventdata);
 }
 
 function turnitin_event_mod_updated($eventdata) {
     $eventdata->eventtype = 'mod_updated';
-    return plagiarism_plugin_turnitin::event_handler($eventdata);
+    $turnitin = new plagiarism_plugin_turnitin();
+    return $turnitin->event_handler($eventdata);
 }
 
 function turnitin_event_mod_deleted($eventdata) {
     $eventdata->eventtype = 'mod_deleted';
-    return plagiarism_plugin_turnitin::event_handler($eventdata);
+    $turnitin = new plagiarism_plugin_turnitin();
+    return $turnitin->event_handler($eventdata);
 }
