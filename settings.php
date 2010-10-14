@@ -100,19 +100,14 @@
 
     if ($plagiarismsettings) {
         //Now show link to ADMIN tii interface - NOTE: this logs in the ADMIN user, should be hidden from normal teachers.
-        $tii['uid']      = $plagiarismsettings['turnitin_userid'];
-        $tii['username'] = $plagiarismsettings['turnitin_userid'];
-        $tii['uem']      = $plagiarismsettings['turnitin_email'];
-        $tii['ufn']      = $plagiarismsettings['turnitin_firstname'];
-        $tii['uln']      = $plagiarismsettings['turnitin_lastname'];
-        $tii['utp']      = '2'; //2 = this user is an instructor
-        $tii['utp'] = '3';
-        $tii['fcmd'] = '1'; //when set to 2 this returns XML
-        $tii['fid'] = '12'; //set commands - Administrator login/statistics.
+        $tii['utp'] = TURNITIN_ADMIN;
+        $tii = turnitin_get_tii_user($tii, $USER, $plagiarismsettings);
+        $tii['fcmd'] = TURNITIN_LOGIN; //when set to 2 this returns XML
+        $tii['fid'] = TURNITIN_ADMIN_STATS; //set commands - Administrator login/statistics.
         echo '<div align="center">';
         echo '<a href="'.turnitin_get_url($tii,$plagiarismsettings).'" target="_blank">'.get_string("adminlogin","plagiarism_turnitin").'</a><br/>';
-        $tii['utp'] = '2';
-        $tii['fid'] = '1'; //set commands - Administrator login/statistics.
+        $tii['utp'] = TURNITIN_INSTRUCTOR;
+        $tii['fid'] = TURNITIN_CREATE_USER; //set commands - Administrator login/statistics.
         echo '<a href="'.turnitin_get_url($tii, $plagiarismsettings).'" target="_blank">'.get_string("teacherlogin","plagiarism_turnitin").'</a>';
         echo '</div>';
     }

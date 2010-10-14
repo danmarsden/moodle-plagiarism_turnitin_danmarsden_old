@@ -452,12 +452,12 @@ function turnitin_get_url($tii, $plagiarismsettings, $returnArray=false) {
     } else {
         $tii['dis'] ='1'; //sets e-mail notification for users in tii system to disabled.
     }
-    //munge e-mails if prefix is set.
-    if (isset($plagiarismsettings['turnitin_emailprefix'])) { //if email prefix is set
+/*    //munge e-mails if prefix is set.
+    if (!empty($plagiarismsettings['turnitin_emailprefix'])) { //if email prefix is set
         if ($tii['uem'] <> $plagiarismsettings['turnitin_email']) { //if email is not the global teacher.
             $tii['uem'] = $plagiarismsettings['turnitin_emailprefix'] . $tii['uem']; //munge e-mail to prevent user access.
         }
-    }
+    }*/
     //set vars if not set.
     if (!isset($tii['encrypt'])) {
         $tii['encrypt'] = '0';
@@ -1126,30 +1126,30 @@ function turnitin_get_form_elements($mform) {
         $mform->addElement('header', 'plagiarismdesc');
         $mform->addElement('select', 'use_turnitin', get_string("useturnitin", "plagiarism_turnitin"), $ynoptions);
         $mform->addElement('select', 'plagiarism_show_student_score', get_string("showstudentsscore", "plagiarism_turnitin"), $tiioptions);
-        $mform->setHelpButton('plagiarism_show_student_score', array('showstudentsscore', get_string('showstudentsscore', 'plagiarism_turnitin'),'plagiarism_turnitin'));
+        $mform->addHelpButton('plagiarism_show_student_score', 'showstudentsscore', 'plagiarism_turnitin');
         $mform->addElement('select', 'plagiarism_show_student_report', get_string("showstudentsreport", "plagiarism_turnitin"), $tiioptions);
-        $mform->setHelpButton('plagiarism_show_student_report', array('showstudentsreport', get_string('showstudentsreport', 'plagiarism_turnitin'),'plagiarism_turnitin'));
+        $mform->addHelpButton('plagiarism_show_student_report', 'showstudentsreport', 'plagiarism_turnitin');
         if ($mform->elementExists('var4')) {
             $mform->addElement('select', 'plagiarism_draft_submit', get_string("draftsubmit", "plagiarism_turnitin"), $tiidraftoptions);
         }
         $mform->addElement('select', 'plagiarism_compare_student_papers', get_string("comparestudents", "plagiarism_turnitin"), $ynoptions);
-        $mform->setHelpButton('plagiarism_compare_student_papers', array('comparestudents', get_string('comparestudents', 'plagiarism_turnitin'),'plagiarism_turnitin'));
+        $mform->addHelpButton('plagiarism_compare_student_papers', 'comparestudents', 'plagiarism_turnitin');
         $mform->addElement('select', 'plagiarism_compare_internet', get_string("compareinternet", "plagiarism_turnitin"), $ynoptions);
-        $mform->setHelpButton('plagiarism_compare_internet', array('compareinternet', get_string('compareinternet', 'plagiarism_turnitin'),'plagiarism_turnitin'));
+        $mform->addHelpButton('plagiarism_compare_internet', 'compareinternet', 'plagiarism_turnitin');
         $mform->addElement('select', 'plagiarism_compare_journals', get_string("comparejournals", "plagiarism_turnitin"), $ynoptions);
-        $mform->setHelpButton('plagiarism_compare_journals', array('comparejournals', get_string('comparejournals', 'plagiarism_turnitin'),'plagiarism_turnitin'));
+        $mform->addHelpButton('plagiarism_compare_journals', 'comparejournals', 'plagiarism_turnitin');
         if (get_config('plagiarism', 'turnitin_institutionnode')) {
             $mform->addElement('select', 'plagiarism_compare_institution', get_string("compareinstitution", "plagiarism_turnitin"), $ynoptions);
-            $mform->setHelpButton('plagiarism_compare_institution', array('compareinstitution', get_string('compareinstitution', 'plagiarism_turnitin'),'plagiarism_turnitin'));
+            $mform->addHelpButton('plagiarism_compare_institution', 'compareinstitution', 'plagiarism_turnitin');
         }
         $mform->addElement('select', 'plagiarism_report_gen', get_string("reportgen", "plagiarism_turnitin"), $reportgenoptions);
-        $mform->setHelpButton('plagiarism_report_gen', array('reportgen', get_string('reportgen', 'plagiarism_turnitin'),'plagiarism_turnitin'));
+        $mform->addHelpButton('plagiarism_report_gen', 'reportgen', 'plagiarism_turnitin');
         $mform->addElement('select', 'plagiarism_exclude_biblio', get_string("excludebiblio", "plagiarism_turnitin"), $ynoptions);
-        $mform->setHelpButton('plagiarism_exclude_biblio', array('excludebiblio', get_string('excludebiblio', 'plagiarism_turnitin'),'plagiarism_turnitin'));
+        $mform->addHelpButton('plagiarism_exclude_biblio', 'excludebiblio', 'plagiarism_turnitin');
         $mform->addElement('select', 'plagiarism_exclude_quoted', get_string("excludequoted", "plagiarism_turnitin"), $ynoptions);
-        $mform->setHelpButton('plagiarism_exclude_quoted', array('excludequoted', get_string('excludequoted', 'plagiarism_turnitin'),'plagiarism_turnitin'));
+        $mform->addHelpButton('plagiarism_exclude_quoted', 'excludequoted', 'plagiarism_turnitin');
         $mform->addElement('select', 'plagiarism_exclude_matches', get_string("excludematches", "plagiarism_turnitin"), $excludetype);
-        $mform->setHelpButton('plagiarism_exclude_matches', array('excludematches', get_string('excludematches', 'plagiarism_turnitin'),'plagiarism_turnitin'));
+        $mform->addHelpButton('plagiarism_exclude_matches', 'excludematches', 'plagiarism_turnitin');
         $mform->addElement('text', 'plagiarism_exclude_matches_value', '');
         $mform->addRule('plagiarism_exclude_matches_value', null, 'numeric', null, 'client');
         $mform->disabledIf('plagiarism_exclude_matches_value', 'plagiarism_exclude_matches', 'eq', 0);
@@ -1270,7 +1270,7 @@ function plagiarism_get_css_rank ($score) {
 */
 function turnitin_get_tii_user($tii, $user, $plagiarismsettings) {
     global $USER;
-    if (is_int($user) && ($tii['utp'] == TURNITIN_STUDENT or !$forceglobalteacher)) {
+    if (is_int($user) && ($tii['utp'] == TURNITIN_STUDENT)) {
         //full user record needed
         $user = ($user == $USER->id ? $USER : $DB->get_record('user', array('id'=>$user)));
     }
