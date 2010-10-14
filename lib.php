@@ -79,10 +79,10 @@ require_once($CFG->dirroot.'/plagiarism/lib.php');
 ///// Turnitin Class ////////////////////////////////////////////////////
 class plagiarism_plugin_turnitin extends plagiarism_plugin {
     public function get_links($linkarray) {
-        debugging('needs to be fixed!');
-        return '';
         //$userid, $file, $cmid, $course, $module
-        global $DB, $CFG, $USER;
+        $cmid = $linkarray['cmid'];
+        $userid = $linkarray['userid'];
+        global $DB, $USER, $COURSE;
         $plagiarismvalues = $DB->get_records_menu('turnitin_config', array('cm'=>$cmid),'','name,value');
         if (empty($plagiarismvalues['use_turnitin'])) {
             //nothing to do here... move along!
@@ -96,7 +96,7 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
             if ($plagiarismsettings = $this->get_settings()) {
                 $plagiarismfile = $DB->get_record('turnitin_files', array('cm'=>$cmid,
                                                                             'userid'=>$userid,
-                                                                            'identifier'=>$file->get_id()));
+                                                                            'identifier'=>$linkarray['file']->get_contenthash()));
                 if (isset($plagiarismfile->similarityscore) && $plagiarismfile->statuscode=='success') { //if TII has returned a succesful score.
                     //check for open mod.
                     $assignclosed = false;
@@ -110,7 +110,7 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
                     $rank = plagiarism_get_css_rank($plagiarismfile->similarityscore);
                     if ($USER->id <> $userid) { //this is a teacher with moodle/plagiarism_turnitin:viewsimilarityscore
                         if (has_capability('moodle/plagiarism_turnitin:viewfullreport', $modulecontext)) {
-                            $output .= '<span class="plagiarismreport"><a href="'.turnitin_get_report_link($plagiarismfile, $course, $plagiarismsettings).'" target="_blank">'.get_string('similarity', 'plagiarism_turnitin').':</a><span class="'.$rank.'">'.$plagiarismfile->similarityscore.'%</span></span>';
+                            $output .= '<span class="plagiarismreport"><a href="'.turnitin_get_report_link($plagiarismfile, $COURSE, $plagiarismsettings).'" target="_blank">'.get_string('similarity', 'plagiarism_turnitin').':</a><span class="'.$rank.'">'.$plagiarismfile->similarityscore.'%</span></span>';
                         } else {
                             $output .= '<span class="plagiarismreport">'.get_string('similarity', 'plagiarism_turnitin').':<span class="'.$rank.'">'.$plagiarismfile->similarityscore.'%</span></span>';
                         }
@@ -119,7 +119,7 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
                              ($plagiarismvalues['plagiarism_show_student_score']==2 && $assignclosed) or //if student score to be show when assignment closed
                              ($plagiarismvalues['plagiarism_show_student_report']==2 && $assignclosed))) { //if student report to be shown when assignment closed
                         if (($plagiarismvalues['plagiarism_show_student_report']==2 && $assignclosed) or $plagiarismvalues['plagiarism_show_student_report']==1) {
-                            $output .= '<span class="plagiarismreport"><a href="'.turnitin_get_report_link($plagiarismfile, $course, $plagiarismsettings).'" target="_blank">'.get_string('similarity', 'plagiarism_turnitin').'</a>';
+                            $output .= '<span class="plagiarismreport"><a href="'.turnitin_get_report_link($plagiarismfile, $COURSE, $plagiarismsettings).'" target="_blank">'.get_string('similarity', 'plagiarism_turnitin').'</a>';
                             if ($plagiarismvalues['plagiarism_show_student_score']==1 or ($plagiarismvalues['plagiarism_show_student_score']==2 && $assignclosed)) {
                                 $output .= ':<span class="'.$rank.'">'.$plagiarismfile->similarityscore.'%</span>';
                             }
@@ -130,7 +130,7 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
                     }
                     //now check if grademark enabled and return the status of this file.
                     if (!empty($plagiarismsettings['turnitin_enablegrademark'])) {
-                            $output .= '<span class="grademark">'.turnitin_get_grademark_link($plagiarismfile, $course, $module, $plagiarismsettings)."</span>";
+                            $output .= '<span class="grademark">'.turnitin_get_grademark_link($plagiarismfile, $COURSE, $module, $plagiarismsettings)."</span>";
                     }
                 } else if(isset($plagiarismfile->statuscode)) { //always display errors - even if the student isn't able to see report/score.
                     $output .= turnitin_error_text($plagiarismfile->statuscode);
@@ -342,7 +342,6 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
     public function event_handler($eventdata) {
         global $DB, $CFG;
         $result = true;
-        print_object($eventdata);
         $supportedmodules = array('assignment', 'quiz');
         if (empty($eventdata->modulename) || !in_array($eventdata->modulename, $supportedmodules)) {
             debugging("this module isn't handled:".$eventdata->modulename); //TODO: remove this debug when working.
@@ -364,10 +363,8 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
         } else if ($eventdata->eventtype=="mod_deleted") {
            return  turnitin_update_assignment($plagiarismsettings, $plagiarismvalues, $eventdata, 'delete');
         } else if ($eventdata->eventtype=="file_uploaded") {
-            echo "file upload!";
             // check if the module associated with this event still exists
             if (!$DB->record_exists('course_modules', array('id' => $eventdata->cmid))) {
-                mtrace("nocoursemodules");
                 return $result;
             }
             if (!empty($eventdata->files)) { //this is an upload event with multiple files
@@ -380,8 +377,7 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
                         continue;
                     }
                     if (empty($plagiarismvalues['plagiarism_draft_submit'])) { //check if this is an advanced assignment and shouldn't send the file yet.
-                        mtrace("do it!");
-                        $pid = plagiarism_update_record($cmid, $eventdata->userid, $efile->get_id());
+                        $pid = plagiarism_update_record($cmid, $eventdata->userid, $efile->get_contenthash());
                         if (!empty($pid)) {
                             $result = turnitin_send_file($pid, $plagiarismsettings, $efile);
                         }
@@ -634,7 +630,7 @@ function turnitin_post_data($tii, $plagiarismsettings, $file='') {
     $url = get_config('plagiarism', 'turnitin_api');
     $status = check_dir_exists($CFG->dataroot."/plagiarism/",true);
     if ($status && !empty($file)) {
-        if ($file->type == "tempturnitin") {
+        if (!empty($file->type) && $file->type == "tempturnitin") {
             $fields['pdata'] = '@'.$file->filepath;
             $c = new curl(array('proxy'=>true));
             $xml = $c->post($url,$fields);
@@ -753,7 +749,6 @@ function turnitin_send_file($pid, $plagiarismsettings, $file) {
     //$tii2['diagnostic'] = '1';
     $tii['fid']      = TURNITIN_CREATE_USER;
     $tiixml = plagiarism_get_xml(turnitin_get_url($tii, $plagiarismsettings));
-    print_object($tiixml);
     if (empty($tiixml->rcode[0]) or $tiixml->rcode[0] <> TURNITIN_RESP_USER_CREATED) { //this is the success code for uploading a file. - we need to return the oid and save it!
          mtrace('could not create user/login to turnitin code:'.$tiixml->rcode[0]);
     } else {
@@ -783,13 +778,13 @@ function turnitin_send_file($pid, $plagiarismsettings, $file) {
 
             //now submit this uploaded file to Tii! (fid=5)
             $tii['fid']     = TURNITIN_SUBMIT_PAPER;
-            if ($file->type == "tempturnitin") {
-                $tii['ptl']     = $file->filename; //paper title
-                $tii['submit_date'] = rawurlencode(gmdate('Y-m-d H:i:s', $file->timestamp));
-            } else {
+          //  if ($file->type == "tempturnitin") {
+            //    $tii['ptl']     = $file->filename; //paper title
+              //  $tii['submit_date'] = rawurlencode(gmdate('Y-m-d H:i:s', $file->timestamp));
+           // } else {
                 $tii['ptl']     = $file->get_filename(); //paper title
                 $tii['submit_date'] = rawurlencode(gmdate('Y-m-d H:i:s', $file->get_timemodified()));
-            }
+           // }
             $tii['ptype']   = '2'; //filetype
             $tii['pfn']     = $tii['ufn'];
             $tii['pln']     = $tii['uln'];
@@ -956,7 +951,7 @@ function turnitin_update_assignment($plagiarismsettings, $plagiarismvalues, $eve
             $modname = (strlen($module->name) > 90 ? substr($module->name, 0, 90) : $module->name); //check length of var and shorten if needed
             //first check if this assignment has already been created
             if (empty($plagiarismvalues['turnitin_assignid'])) {
-                $tii['assignid']   = $modname.'_'.$module->id; //assignment name stored in TII
+                $tii['assignid']   = $plagiarismsettings['turnitin_courseprefix'].'_'.$modname.'_'.$module->id; //assignment name stored in TII
                 $tii['fcmd'] = TURNITIN_RETURN_XML;
             } else {
                 $tii['assignid'] = $plagiarismvalues['turnitin_assignid'];
@@ -1238,10 +1233,17 @@ function plagiarism_update_record($cmid, $userid, $identifier) {
                                                        'userid'=>$userid,
                                                        'identifier'=>$identifier))) {
         //update record.
-        $plagiarism_file->statuscode = 'pending';
-        $plagiarism_file->similarityscore ='0';
-        if (! $DB->update_record('turnitin_files', $plagiarism_file)) {
-            debugging("update turnitin_files failed!");
+        //only update this record if it isn't pending or in a success state
+        //TODO: this only works with files - need to allow force update for things like quiz essay qs
+        if ($plagiarism_file->statuscode !== 'pending' or
+            $plagiarism_file->statuscode !== 'success' or
+            $plagiarism_file->statuscode !== TURNITIN_RESP_PAPER_SENT) {
+
+            $plagiarism_file->statuscode = 'pending';
+            $plagiarism_file->similarityscore ='0';
+            if (! $DB->update_record('turnitin_files', $plagiarism_file)) {
+                debugging("update turnitin_files failed!");
+            }
         }
         return $plagiarism_file->id;
     } else {
