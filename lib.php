@@ -367,6 +367,9 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
             if (!$DB->record_exists('course_modules', array('id' => $eventdata->cmid))) {
                 return $result;
             }
+            if (!empty($eventdata->file) && empty($eventdata->files)) { //single assignment type passes a single file
+                $eventdata->files[] = $eventdata->file;
+            }
             if (!empty($eventdata->files)) { //this is an upload event with multiple files
                 foreach ($eventdata->files as $efile) {
                     //hacky way to check file still exists

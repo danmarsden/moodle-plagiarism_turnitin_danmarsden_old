@@ -98,6 +98,64 @@
 
     $mform->set_data($plagiarismsettings);
 
+    //check for old 1.9 tables and display upgrade button.
+    $dbman = $DB->get_manager();
+    $table = new xmldb_table('tii_files');
+    $table2 = new xmldb_table('plagiarism_config');
+    if ($dbman->table_exists($table) && $dbman->table_exists($table2)) {
+
+        // do plagiarism_config table - easy as structure stays the same
+        $plagiarism_config = $DB->get_records('plagiarism_config');
+        if (!empty($plagiarism_config)) {
+            foreach ($plagiarism_config as $pg) {
+                $newpg = new stdClass();
+                $newpg->cm = $pg->cm;
+                $newpg->name = $pg->name;
+                $newpg->value - $pg->value;
+                $DB->insert_record('turnitin_config', $newpg);
+            }
+        }
+        $dbman->drop_table($table2);
+
+
+        //now do tii_files table
+        $tii_files = $DB->get_records('tii_files');
+        if (!empty($tii_files)) {
+            foreach ($tii_files as $tf) {
+                $newtf = new stdClass();
+                $newf->userid = $tf->userid;
+                $newf->externalid = $tf->tii;
+                $newf->exernalstatus = 0;
+                $newf->statuscode = $tf->tiicode;
+                $newf->similarityscore = $tf->tiiscore;
+
+                //now get cm based on course and module
+                $cm = $DB->get_record('course_modules', array('course'=>$tf->course,
+                                                              'module'=>$tf->module,
+                                                              'instance'=>$tf->instance));
+                if (!empty($cm)) {
+                    $newf->cm = $cm->id;
+                    //now get the contenthash for this old file
+                    //first get all the files from the assignment module.
+                    $modulecontext = get_context_instance(CONTEXT_MODULE, $cm->id);
+                    $submission = $DB->get_record('assignment_submissions', array('assignment'=>$this->instance, 'userid'=>$tf->userid));
+                    $files = $fs->get_area_files($modulecontext, 'mod_assignment', 'submission', $submission->id);
+                    foreach ($files as $file) {
+                        if ($file->get_filename()==$tf->filename) {
+                            $newf->identifier = $file->get_contenthash();
+                        }
+                    }
+                    if (!empty($newf->identifier)) {
+                        $DB->insert_record('turnitin_files', $tf);
+                    }
+                }
+            }
+        }
+        $dbman->drop_table($table);
+    }
+    //finished check for old tables..
+
+
     if ($plagiarismsettings) {
         //Now show link to ADMIN tii interface - NOTE: this logs in the ADMIN user, should be hidden from normal teachers.
         $tii['utp'] = TURNITIN_ADMIN;
