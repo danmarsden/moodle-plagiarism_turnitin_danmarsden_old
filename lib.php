@@ -333,7 +333,7 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
      * used by admin/cron.php to get similarity scores from submitted files.
      *
      */
-    public function plagiarism_cron() {
+    public function cron() {
         $plagiarismsettings = $this->get_settings();
         if ($plagiarismsettings) {
             turnitin_get_scores($plagiarismsettings);
@@ -1285,24 +1285,24 @@ function turnitin_get_tii_user($tii, $user, $plagiarismsettings) {
 
 function turnitin_event_file_uploaded($eventdata) {
     $eventdata->eventtype = 'file_uploaded';
-    return Turnitin::event_handler($eventdata);
+    return plagiarism_plugin_turnitin::event_handler($eventdata);
 }
 function turnitin_event_files_done($eventdata) {
     $eventdata->eventtype = 'files_done';
-    return Turnitin::event_handler($eventdata);
+    return plagiarism_plugin_turnitin::event_handler($eventdata);
 }
 
 function turnitin_event_mod_created($eventdata) {
     $eventdata->eventtype = 'mod_created';
-    return Turnitin::event_handler($eventdata);
+    return plagiarism_plugin_turnitin::event_handler($eventdata);
 }
 
 function turnitin_event_mod_updated($eventdata) {
     $eventdata->eventtype = 'mod_updated';
-    return Turnitin::event_handler($eventdata);
+    return plagiarism_plugin_turnitin::event_handler($eventdata);
 }
 
 function turnitin_event_mod_deleted($eventdata) {
     $eventdata->eventtype = 'mod_deleted';
-    return Turnitin::event_handler($eventdata);
+    return plagiarism_plugin_turnitin::event_handler($eventdata);
 }
