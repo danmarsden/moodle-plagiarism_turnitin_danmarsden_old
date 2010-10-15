@@ -49,16 +49,18 @@ $sqlcount =  "SELECT COUNT(id) FROM {turnitin_files} WHERE statuscode <>'success
 if ($resetuser==1 && $id) {
     $tfile = $DB->get_record('turnitin_files', array('id'=>$id));
     $tfile->statuscode = 'pending';
-    if ($DB->update_record('turnitin_files', $tfile)) {
-        notify(get_string('fileresubmitted','plagiarism_turnitin'));
-    }
+    //TODO: trigger event for this file
+    //if ($DB->update_record('turnitin_files', $tfile)) {
+     //   notify(get_string('fileresubmitted','plagiarism_turnitin'));
+    //}
 } elseif ($resetuser==2) {
     $tiifiles = get_records_sql($sqlallfiles);
     foreach($tiifiles as $tiifile) {
         $tiifile->statuscode = 'pending';
-        if ($DB->update_record('turnitin_files', $tiifile)) {
-            notify(get_string('fileresubmitted','plagiarism_turnitin'));
-        }
+        //TODO: trigger event for this file
+       // if ($DB->update_record('turnitin_files', $tiifile)) {
+         //   notify(get_string('fileresubmitted','plagiarism_turnitin'));
+        //}
     }
  }
 if (!empty($delete)) {
