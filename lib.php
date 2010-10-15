@@ -19,7 +19,7 @@
  * lib.php - Contains Turnitin soecific functions called by Modules.
  *
  * @since 2.0
- * @package    moodlecore
+ * @package    plagiarism_turnitin
  * @subpackage plagiarism
  * @copyright  2010 Dan Marsden http://danmarsden.com
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
