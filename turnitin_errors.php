@@ -47,18 +47,20 @@ echo $OUTPUT->box(get_string('tiiexplainerrors','plagiarism_turnitin'));
 $sqlallfiles = "SELECT t.*, u.firstname, u.lastname, u.id as userid, m.name as moduletype, cm.course as courseid, cm.instance as cminstance FROM {turnitin_files} t, {user} u, {modules} m, {course_modules} cm WHERE m.id=cm.module AND cm.id=t.cm AND t.userid=u.id AND t.statuscode <>'success' AND t.statuscode <>'pending' AND t.statuscode <> '51'";
 $sqlcount =  "SELECT COUNT(id) FROM {turnitin_files} WHERE statuscode <>'success' AND statuscode <>'pending' AND statuscode <> '51'";
 if ($resetuser==1 && $id) {
-    $tfile = $DB->get_record('turnitin_files', array('id'=>$id));
+    $sqlid = "SELECT t.*, u.firstname, u.lastname, u.id as userid, m.name as moduletype, cm.course as courseid, cm.instance as cminstance FROM {turnitin_files} t, {user} u, {modules} m, {course_modules} cm WHERE m.id=cm.module AND cm.id=t.cm AND t.userid=u.id AND t.id = ?";
+    $tfile = $DB->get_record_sql($sqlid, array('id'=>$id));
     $tfile->statuscode = 'pending';
-    $modulecontext = get_context_instance(CONTEXT_MODULE, $tf->cmid);
-    if ($tf->moduletype =='assignment') {
-         $submission = $DB->get_record('assignment_submissions', array('assignment'=>$tf->cminstance, 'userid'=>$tf->userid));
-         $files = $fs->get_area_files($modulecontext, 'mod_assignment', 'submission', $submission->id);
+    $modulecontext = get_context_instance(CONTEXT_MODULE, $tfile->cm);
+    if ($tfile->moduletype =='assignment') {
+         $submission = $DB->get_record('assignment_submissions', array('assignment'=>$tfile->cminstance, 'userid'=>$tfile->userid));
+         $fs = get_file_storage();
+         $files = $fs->get_area_files($modulecontext->id, 'mod_assignment', 'submission', $submission->id);
          if (!empty($files)) {
              $eventdata = new stdClass();
-             $eventdata->modulename   = $tf->moduletype;
-             $eventdata->cmid         = $tf->cmid;
-             $eventdata->courseid     = $tf->courseid;
-             $eventdata->userid       = $tf->$userid;
+             $eventdata->modulename   = $tfile->moduletype;
+             $eventdata->cmid         = $tfile->cm;
+             $eventdata->courseid     = $tfile->courseid;
+             $eventdata->userid       = $tfile->userid;
              $eventdata->files        = $files;
 
              events_trigger('assessable_file_uploaded', $eventdata);
@@ -70,7 +72,7 @@ if ($resetuser==1 && $id) {
              notify("could not find any files for this submission");
          }
     } else {
-        notify("resubmit function for ".$tf->moduletype. " not complete yet"); 
+        notify("resubmit function for ".$tfile->moduletype. " not complete yet"); 
     }
     //TODO: trigger event for this file
 
