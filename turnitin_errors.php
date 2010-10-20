@@ -44,7 +44,11 @@ $currenttab='turnitinerrors';
 require_once('turnitin_tabs.php');
 
 echo $OUTPUT->box(get_string('tiiexplainerrors','plagiarism_turnitin'));
-$sqlallfiles = "SELECT t.*, u.firstname, u.lastname, u.id as userid, m.name as moduletype, cm.course as courseid, cm.instance as cminstance FROM {turnitin_files} t, {user} u, {modules} m, {course_modules} cm WHERE m.id=cm.module AND cm.id=t.cm AND t.userid=u.id AND t.statuscode <>'success' AND t.statuscode <>'pending' AND t.statuscode <> '51'";
+$sqlallfiles = "SELECT t.*, u.firstname, u.lastname, u.id as userid, m.name as moduletype, ".
+               "cm.course as courseid, cm.instance as cminstance FROM ".
+               "{turnitin_files} t, {user} u, {modules} m, {course_modules} cm ".
+               "WHERE m.id=cm.module AND cm.id=t.cm AND t.userid=u.id ".
+               "AND t.statuscode <>'success' AND t.statuscode <>'pending' AND t.statuscode <> '51'";
 $sqlcount =  "SELECT COUNT(id) FROM {turnitin_files} WHERE statuscode <>'success' AND statuscode <>'pending' AND statuscode <> '51'";
 if ($resetuser==1 && $id) {
     $sqlid = "SELECT t.*, u.firstname, u.lastname, u.id as userid, m.name as moduletype, cm.course as courseid, cm.instance as cminstance FROM {turnitin_files} t, {user} u, {modules} m, {course_modules} cm WHERE m.id=cm.module AND cm.id=t.cm AND t.userid=u.id AND t.id = ?";
