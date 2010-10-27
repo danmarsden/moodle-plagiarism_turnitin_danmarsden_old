@@ -36,8 +36,11 @@ $id = optional_param('id',0,PARAM_INT);
 $resetuser = optional_param('reset',0,PARAM_INT);
 $delete = optional_param('delete', 0, PARAM_INT);
 $page = optional_param('page', 0, PARAM_INT);
+$sort = optional_param('sort', '', PARAM_ALPHA);
+$dir = optional_param('dir', '', PARAM_ALPHA);
+
 $limit = 20;
-$baseurl = new moodle_url('turnitin_errors.php', array('page' => $page));
+$baseurl = new moodle_url('turnitin_errors.php', array('page' => $page, 'sort' => $sort));
 
 echo $OUTPUT->header();
 $currenttab='turnitinerrors';
@@ -95,18 +98,46 @@ if (!empty($delete)) {
     notify(get_string('filedeleted','plagiarism_turnitin'));
 
 }
+//now do sorting if specified
+$orderby = '';
+if (!empty($sort)) {
+    if ($sort=="name") {
+        $orderby = " ORDER BY u.firstname, u.lastname";
+    } elseif ($sort=="module") {
+        $orderby = " ORDER BY cm.id";
+    } elseif ($sort=="status") {
+        $orderby = " ORDER BY t.statuscode";
+    }
+    if (!empty($orderby) && ($dir=='asc' || $dir=='desc')) {
+        $orderby .= " ".$dir;
+    }
+}
 
 $count = $DB->count_records_sql($sqlcount);
 
-$turnitin_files = $DB->get_records_sql($sqlallfiles." LIMIT ".$page*$limit.', '.$limit);
+$turnitin_files = $DB->get_records_sql($sqlallfiles.$orderby, null, $page*$limit, $limit);
 
 
 $table = new html_table();
-$table->head = array(get_string('name'),
-                     get_string('module', 'plagiarism_turnitin'),
-                     get_string('file'),
-                     get_string('status'), '');
-$table->align = array ("left", "left", "left", "center", "center");
+$columns = array('name', 'module', 'file', 'status');
+foreach ($columns as $column) {
+    $strtitle = get_string($column, 'plagiarism_turnitin');
+    if ($column=='file') {
+        $table->head[] = $strtitle;
+    } else {
+        if ($sort != $column) {
+            $columnicon = '';
+            $columndir = 'asc';
+        } else {
+            $columndir = $dir == 'asc' ? 'desc' : 'asc';
+            $columnicon = ' <img src="'.$OUTPUT->pix_url('t/'.($dir == 'asc' ? 'down' : 'up' )).'f" alt="" />';
+        }
+        $table->head[] = '<a href="turnitin_errors.php?sort='.$column.'&amp;dir='.$columndir.'">'.$strtitle.'</a>'.$columnicon;
+    }
+    $table->align[] = 'left';
+}
+$table->head[] = '';
+
 $table->width = "95%";
 foreach ($turnitin_files as $tf) {
     //heavy way to obtain filename and object to allow download link:
