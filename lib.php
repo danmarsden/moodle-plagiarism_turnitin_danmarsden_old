@@ -289,9 +289,8 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
         }
         $tii['utp']      = TURNITIN_INSTRUCTOR;
         $tii = turnitin_get_tii_user($tii, $USER, $plagiarismsettings);
-        $courseshortname = (strlen($course->shortname) > 70 ? substr($course->shortname, 0, 70) : $course->shortname); //shouldn't happen but just in case!
         $tii['cid']      = get_config('plagiarism_turnitin_course', $course->id); //course ID
-        $tii['ctl']      = $plagiarismsettings['turnitin_courseprefix'].$course->id.$courseshortname; //Course title.  -this uses Course->id and shortname to ensure uniqueness.
+        $tii['ctl']      = (strlen($course->shortname) > 70 ? substr($course->shortname, 0, 70) : $course->shortname);
         $tii['fcmd'] = TURNITIN_RETURN_XML;
         $tii['fid']  = TURNITIN_CREATE_CLASS; // create class under the given account and assign above user as instructor (fid=2)
         //$tii['diagnostic'] = '1';
@@ -311,12 +310,12 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
         $tii['utp']      = TURNITIN_INSTRUCTOR;
         $tii = turnitin_get_tii_user($tii, $USER, $plagiarismsettings);
         $tii['cid']      = get_config('plagiarism_turnitin_course', $course->id); //course ID
-        $tii['ctl']      = $plagiarismsettings['turnitin_courseprefix'].$course->id.$course->shortname; //Course title.  -this uses Course->id and shortname to ensure uniqueness.
+        $tii['ctl']      = (strlen($course->shortname) > 70 ? substr($course->shortname, 0, 70) : $course->shortname);
         $turnitin_assignid = $DB->get_field('turnitin_config','value', array('cm'=>$cm->id, 'name'=>'turnitin_assignid'));
         if (!empty($turnitin_assignid)) {
             $tii['assignid'] = $turnitin_assignid;
         }
-        $tii['assign']   = $plagiarismsettings['turnitin_courseprefix']. '_'.$module->name.'_'.$module->id; //assignment name stored in TII
+        $tii['assign']   = (strlen($module->name) > 90 ? substr($module->name, 0, 90) : $module->name); //assignment name stored in TII
         $tii['fcmd']     = TURNITIN_RETURN_XML;
         $tii['fid']      = TURNITIN_LIST_SUBMISSIONS;
         $tiixml = plagiarism_get_xml(turnitin_get_url($tii, $plagiarismsettings));
@@ -753,9 +752,8 @@ function turnitin_send_file($pid, $plagiarismsettings, $file) {
     $tii = array();
     $tii['utp']      = TURNITIN_STUDENT;
     $tii = turnitin_get_tii_user($tii, $user, $plagiarismsettings);
-    $courseshortname = (strlen($course->shortname) > 70 ? substr($course->shortname, 0, 70) : $course->shortname); //shouldn't happen but just in case!
     $tii['cid']      = get_config('plagiarism_turnitin_course', $course->id);
-    $tii['ctl']      = $plagiarismsettings['turnitin_courseprefix'].$course->id.$courseshortname;
+    $tii['ctl']      = (strlen($course->shortname) > 70 ? substr($course->shortname, 0, 70) : $course->shortname);
     $tii['fcmd']     = TURNITIN_RETURN_XML;
     $tii['session-id'] = $tiisession;
     //$tii2['diagnostic'] = '1';
@@ -775,8 +773,7 @@ function turnitin_send_file($pid, $plagiarismsettings, $file) {
         if (!empty($turnitin_assignid)) {
             $tii['assignid'] = $turnitin_assignid;
         }
-        $modname = (strlen($module->name) > 90 ? substr($module->name, 0, 90) : $module->name); //check length of var and shorten if needed
-        $tii['assign']   = $modname.'_'.$module->id;
+        $tii['assign']   = (strlen($module->name) > 90 ? substr($module->name, 0, 90) : $module->name); //assignment name stored in TII
         $tii['fid']      = TURNITIN_JOIN_CLASS;
         //$tii2['diagnostic'] = '1';
         $tiixml = plagiarism_get_xml(turnitin_get_url($tii, $plagiarismsettings));
@@ -845,7 +842,7 @@ function turnitin_get_scores($plagiarismsettings) {
             $tii['uid']      = $user->username;
             $tii['utp']      = TURNITIN_STUDENT;
             $tii['cid']      = get_config('plagiarism_turnitin_course', $course->id);
-            $tii['ctl']      = $plagiarismsettings['turnitin_courseprefix'].$course->id.$course->shortname;
+            $tii['ctl']      = (strlen($course->shortname) > 70 ? substr($course->shortname, 0, 70) : $course->shortname);
             $tii['fcmd']     = TURNITIN_RETURN_XML;
             $tii['fid']      = TURNITIN_RETURN_REPORT;
             $tii['oid']      = $file->externalid;
@@ -935,13 +932,14 @@ function turnitin_update_assignment($plagiarismsettings, $plagiarismvalues, $eve
         $tii['utp']      = TURNITIN_INSTRUCTOR;
         $tii = turnitin_get_tii_user($tii, $user, $plagiarismsettings);
         $tii['session-id'] = $tiisession;
-        $tii['ctl']      = $plagiarismsettings['turnitin_courseprefix'].$course->id.$courseshortname; //Course title.  -this uses Course->id and shortname to ensure uniqueness.
+        $tii['ctl']      = $courseshortname; //Course title.  -this uses Course->id and shortname to ensure uniqueness.
         if (get_config('plagiarism_turnitin_course', $course->id)) {
             //course already exists - don't bother to create it.
             $tii['cid']      = get_config('plagiarism_turnitin_course', $course->id); //course ID
             mtrace('courseexists - don\'t create');
         } else {
-            $tii['cid']      = $plagiarismsettings['turnitin_courseprefix'].$course->id.$courseshortname; //course ID
+            //TODO: use some random unique id for cid
+            $tii['cid']      = $courseshortname; //course ID
             $tii['fcmd'] = TURNITIN_RETURN_XML;
             $tii['fid']  = TURNITIN_CREATE_CLASS; // create class under the given account and assign above user as instructor (fid=2)
             $tiixml = plagiarism_get_xml(turnitin_get_url($tii, $plagiarismsettings));
@@ -960,21 +958,23 @@ function turnitin_update_assignment($plagiarismsettings, $plagiarismvalues, $eve
 
         if ($result) {
             //now create Assignment in Class
-            $modname = (strlen($module->name) > 90 ? substr($module->name, 0, 90) : $module->name); //check length of var and shorten if needed
             //first check if this assignment has already been created
             if (empty($plagiarismvalues['turnitin_assignid'])) {
+                //TODO: add some unique random id here.
                 $tii['assignid']   = $plagiarismsettings['turnitin_courseprefix'].'_'.$modname.'_'.$module->id; //assignment name stored in TII
                 $tii['fcmd'] = TURNITIN_RETURN_XML;
             } else {
                 $tii['assignid'] = $plagiarismvalues['turnitin_assignid'];
                 $tii['fcmd'] = TURNITIN_UPDATE_RETURN_XML;
             }
-            $tii['assign']   = $modname.'_'.$module->id; //assignment name stored in TII
+            $tii['assign']   = (strlen($module->name) > 90 ? substr($module->name, 0, 90) : $module->name); //assignment name stored in TII
             $tii['fid']      = TURNITIN_CREATE_ASSIGNMENT;
             $tii['ptl']      = $course->id.$course->shortname; //paper title? - assname?
             $tii['ptype']    = TURNITIN_TYPE_FILE; //filetype
             $tii['pfn']      = $tii['ufn'];
             $tii['pln']      = $tii['uln'];
+
+            //TODO: remove logic for datestart/end and use a 2nd API call to set dates correctly.
             $dtstart = time(); //default start time if not set or can't use. - use 30min earlier than now to allow TII to accept files now.
             if (!empty($plagiarismvalues['turnitin_dtstart'])) {
                 //check to see if $module->timeavailable is set and is later than $plagiarismvalues['turnitin_dtstart']
@@ -1113,7 +1113,7 @@ function turnitin_get_grademark_link($plagiarismfile, $course, $module, $plagiar
             $tii = turnitin_get_tii_user($tii, $USER, $plagiarismsettings);
         }
         $tii['cid']      = get_config('plagiarism_turnitin_course', $course->id);
-        $tii['ctl']      = $plagiarismsettings['turnitin_courseprefix'].$course->id.$course->shortname; //Course title.  -this uses Course->id and shortname to ensure uniqueness.
+        $tii['ctl']      = (strlen($course->shortname) > 70 ? substr($course->shortname, 0, 70) : $course->shortname);
         $tii['fcmd'] = TURNITIN_LOGIN;
         $tii['fid'] = TURNITIN_RETURN_GRADEMARK;
         $tii['oid'] = $plagiarismfile->externalid;
@@ -1202,7 +1202,7 @@ function turnitin_get_report_link($file, $course, $plagiarismsettings) {
     }
     $tii = turnitin_get_tii_user($tii, $USER, $plagiarismsettings);
     $tii['cid']      = get_config('plagiarism_turnitin_course', $course->id);
-    $tii['ctl']      = $plagiarismsettings['turnitin_courseprefix'].$course->id.$course->shortname; //Course title.  -this uses Course->id and shortname to ensure uniqueness.
+    $tii['ctl']      = (strlen($course->shortname) > 70 ? substr($course->shortname, 0, 70) : $course->shortname);
     $tii['fcmd'] = TURNITIN_LOGIN;
     $tii['fid'] = TURNITIN_RETURN_REPORT;
     $tii['oid'] = $file->externalid;
