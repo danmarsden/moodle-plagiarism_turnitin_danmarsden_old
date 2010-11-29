@@ -94,9 +94,12 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
         //check if this is a user trying to look at their details, or a teacher with viewsimilarityscore rights.
         if (($USER->id == $userid) || has_capability('moodle/plagiarism_turnitin:viewsimilarityscore', $modulecontext)) {
             if ($plagiarismsettings = $this->get_settings()) {
-                $plagiarismfile = $DB->get_record('turnitin_files', array('cm'=>$cmid,
-                                                                            'userid'=>$userid,
-                                                                            'identifier'=>$linkarray['file']->get_contenthash()));
+                $plagiarismfile = $DB->get_records_sql(
+                            "SELECT * FROM {turnitin_files}
+                             WHERE cm = ? AND userid = ? AND " .
+                            $DB->sql_compare_text('identifier') . " = ?",
+                            array($cmid, $userid,$linkarray['file']->get_contenthash()));
+
                 if (isset($plagiarismfile->similarityscore) && $plagiarismfile->statuscode=='success') { //if TII has returned a succesful score.
                     //check for open mod.
                     $assignclosed = false;
@@ -231,7 +234,13 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
         global $DB, $OUTPUT;
         if ($plagiarismsettings = $this->get_settings()) {
             if (!empty($plagiarismsettings['turnitin_student_disclosure'])) {
-                $showdisclosure = $DB->get_field('turnitin_config', 'value', array('cm'=>$cmid, 'name'=>'use_turnitin'));
+
+                $sql = 'SELECT value
+                        FROM {turnitin_config}
+                        WHERE cm = ?
+                        AND ' . $DB->sql_compare_text('name', 255) . ' = ' . $DB->sql_compare_text('?', 255);
+                $params = array($cmid, 'use_turnitin');
+                $showdisclosure = $DB->get_field_sql($sql, $params);
                 if ($showdisclosure) {
                     echo $OUTPUT->box_start('generalbox boxaligncenter', 'intro');
                     $formatoptions = new stdClass;
