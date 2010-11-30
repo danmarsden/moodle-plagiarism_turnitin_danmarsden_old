@@ -94,7 +94,7 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
         //check if this is a user trying to look at their details, or a teacher with viewsimilarityscore rights.
         if (($USER->id == $userid) || has_capability('moodle/plagiarism_turnitin:viewsimilarityscore', $modulecontext)) {
             if ($plagiarismsettings = $this->get_settings()) {
-                $plagiarismfile = $DB->get_records_sql(
+                $plagiarismfile = $DB->get_record_sql(
                             "SELECT * FROM {turnitin_files}
                              WHERE cm = ? AND userid = ? AND " .
                             $DB->sql_compare_text('identifier') . " = ?",
@@ -1230,9 +1230,12 @@ function plagiarism_update_record($cmid, $userid, $identifier) {
     global $DB;
 
     //now update or insert record into turnitin_files
-    if ($plagiarism_file = $DB->get_record('turnitin_files', array('cm'=>$cmid,
-                                                       'userid'=>$userid,
-                                                       'identifier'=>$identifier))) {
+    $plagiarism_file = $DB->get_record_sql(
+                                "SELECT * FROM {turnitin_files}
+                                 WHERE cm = ? AND userid = ? AND " .
+                                $DB->sql_compare_text('identifier') . " = ?",
+                                array($cmid, $userid,$identifier));
+    if (!empty($plagiarism_file)) {
         //update record.
         //only update this record if it isn't pending or in a success state
         //TODO: this only works with files - need to allow force update for things like quiz essay qs
@@ -1242,9 +1245,7 @@ function plagiarism_update_record($cmid, $userid, $identifier) {
 
             $plagiarism_file->statuscode = 'pending';
             $plagiarism_file->similarityscore ='0';
-            if (! $DB->update_record('turnitin_files', $plagiarism_file)) {
-                debugging("update turnitin_files failed!");
-            }
+            $DB->update_record('turnitin_files', $plagiarism_file);
         }
         return $plagiarism_file->id;
     } else {
@@ -1253,7 +1254,7 @@ function plagiarism_update_record($cmid, $userid, $identifier) {
         $plagiarism_file->userid = $userid;
         $plagiarism_file->identifier = $identifier;
         $plagiarism_file->statuscode = 'pending';
-        if (!$pid =  $DB->insert_record('turnitin_files', $plagiarism_file)) {
+        if (!$pid = $DB->insert_record('turnitin_files', $plagiarism_file)) {
             debugging("insert into turnitin_files failed");
         }
         return $pid;
