@@ -755,7 +755,7 @@ function turnitin_send_file($pid, $plagiarismsettings, $file) {
         debugging("invalid instanceid! - instance:".$cm->instance." Module:".$moduletype." Fileid:".$plagiarism_file->id);
         continue;
     }
-    $dtstart = $DB->get_record('turnitin_config', array('cm'=>$cm->id, 'name'=>'turnitin_dtstart'));
+    $dtstart = $DB->get_record_sql('SELECT * FROM {turnitin_config} WHERE cm = ? AND '.$DB->sql_compare_text('name'). "= ?", array($cm->id, 'turnitin_dtstart'));
     if (!empty($dtstart) && $dtstart->value+600 > time()) {
         mtrace("Warning: assignment start date is too early ".date('Y-m-d H:i:s', $dtstart->value)." in course $course->shortname assignment $module->name will delay sending files until next cron");
         return false; //TODO: check that this doesn't cause a failure in cron
@@ -777,14 +777,19 @@ function turnitin_send_file($pid, $plagiarismsettings, $file) {
     if (empty($tiixml->rcode[0]) or $tiixml->rcode[0] <> TURNITIN_RESP_USER_CREATED) { //this is the success code for uploading a file. - we need to return the oid and save it!
          mtrace('could not create user/login to turnitin code:'.$tiixml->rcode[0]);
     } else {
-        echo "save files record";
         $plagiarism_file->statuscode = $tiixml->rcode[0];
         if (! $DB->update_record('turnitin_files', $plagiarism_file)) {
             debugging("Error updating turnitin_files record");
         }
 
         //now enrol user in class under the given account (fid=3)
-        $turnitin_assignid = $DB->get_field('turnitin_config','value', array('cm'=>$cm->id, 'name'=>'turnitin_assignid'));
+        $sql = 'SELECT value
+                FROM {turnitin_config}
+                WHERE cm = ?
+                AND ' . $DB->sql_compare_text('name', 255) . ' = ' . $DB->sql_compare_text('?', 255);
+        $params = array($cm->id, 'turnitin_assignid');
+        $turnitin_assignid = $DB->get_field_sql($sql, $params);
+
         if (!empty($turnitin_assignid)) {
             $tii['assignid'] = $turnitin_assignid;
         }
