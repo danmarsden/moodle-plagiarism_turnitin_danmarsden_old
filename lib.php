@@ -353,6 +353,8 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
      *
      */
     public function cron() {
+        global $CFG;
+        require_once("$CFG->libdir/filelib.php"); //HACK to include filelib so that when event cron is run then file_storage class is available
         $plagiarismsettings = $this->get_settings();
         if ($plagiarismsettings) {
             turnitin_get_scores($plagiarismsettings);
@@ -386,6 +388,7 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
             if (!$DB->record_exists('course_modules', array('id' => $eventdata->cmid))) {
                 return $result;
             }
+
             if (!empty($eventdata->file) && empty($eventdata->files)) { //single assignment type passes a single file
                 $eventdata->files[] = $eventdata->file;
             }
