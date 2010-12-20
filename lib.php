@@ -676,7 +676,7 @@ function turnitin_post_data($tii, $plagiarismsettings, $file='') {
             $status = new SimpleXMLElement($xml);
         } else {
             //We cannot access the file location of $file directly - we must create a temp file to point to instead
-            $filename = $CFG->dataroot."/plagiarism/".time(); //unique name for this file.
+            $filename = $CFG->dataroot."/plagiarism/".time().$file->get_filename(); //unique name for this file.
             $fh = fopen($filename,'w');
             fwrite($fh, $file->get_content());
             fclose($fh);
