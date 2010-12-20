@@ -79,10 +79,18 @@ require_once($CFG->dirroot.'/plagiarism/lib.php');
 ///// Turnitin Class ////////////////////////////////////////////////////
 class plagiarism_plugin_turnitin extends plagiarism_plugin {
     public function get_links($linkarray) {
+        global $DB, $USER, $COURSE;
         //$userid, $file, $cmid, $course, $module
+        //TODO: the following check is hardcoded to the Assignment module - needs updating to be generic.
+        if (isset($linkarray['assignment'])) {
+            $module = $linkarray['assignment'];
+        } else {
+            $sql = "SELECT a.* FROM {assignment} a, {course_modules} cm WHERE cm.id= ? AND cm.instance = a.id";
+            $module = $DB->get_record_sql($sql, array($cmid));
+        }
         $cmid = $linkarray['cmid'];
         $userid = $linkarray['userid'];
-        global $DB, $USER, $COURSE;
+
         $plagiarismvalues = $DB->get_records_menu('turnitin_config', array('cm'=>$cmid),'','name,value');
         if (empty($plagiarismvalues['use_turnitin'])) {
             //nothing to do here... move along!
