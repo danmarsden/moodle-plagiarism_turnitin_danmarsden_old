@@ -80,6 +80,8 @@ require_once($CFG->dirroot.'/plagiarism/lib.php');
 class plagiarism_plugin_turnitin extends plagiarism_plugin {
     public function get_links($linkarray) {
         global $DB, $USER, $COURSE;
+        $cmid = $linkarray['cmid'];
+        $userid = $linkarray['userid'];
         //$userid, $file, $cmid, $course, $module
         //TODO: the following check is hardcoded to the Assignment module - needs updating to be generic.
         if (isset($linkarray['assignment'])) {
@@ -88,8 +90,6 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
             $sql = "SELECT a.* FROM {assignment} a, {course_modules} cm WHERE cm.id= ? AND cm.instance = a.id";
             $module = $DB->get_record_sql($sql, array($cmid));
         }
-        $cmid = $linkarray['cmid'];
-        $userid = $linkarray['userid'];
 
         $plagiarismvalues = $DB->get_records_menu('turnitin_config', array('cm'=>$cmid),'','name,value');
         if (empty($plagiarismvalues['use_turnitin'])) {
