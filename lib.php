@@ -402,6 +402,9 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
             }
             if (!empty($eventdata->files)) { //this is an upload event with multiple files
                 foreach ($eventdata->files as $efile) {
+                    if ($efile->get_filename() ==='.') {
+                        continue;
+                    }
                     //hacky way to check file still exists
                     $fs = get_file_storage();
                     $fileid = $fs->get_file_by_id($efile->get_id());
@@ -425,6 +428,9 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
                     $fs = get_file_storage();
                     if ($files = $fs->get_area_files($modulecontext->id, 'assignment_submission', $eventdata->userid, "timemodified", false, false)) {
                         foreach ($files as $file) {
+                            if ($file->get_filename()==='.') {
+                                continue;
+                            }
                             //TODO: need to check if this file has already been sent! - possible that the file was sent before draft submit was set.
                             $pid = plagiarism_update_record($cmid, $eventdata->userid, $file->get_id());
                             if (!empty($pid)) {
@@ -822,6 +828,7 @@ function turnitin_send_file($pid, $plagiarismsettings, $file) {
                 $tii['ptl']     = $file->get_filename(); //paper title
                 $tii['submit_date'] = rawurlencode(date('Y-m-d H:i:s', $file->get_timemodified()));
            // }
+
             $tii['ptype']   = '2'; //filetype
             $tii['pfn']     = $tii['ufn'];
             $tii['pln']     = $tii['uln'];
