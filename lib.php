@@ -820,7 +820,7 @@ function turnitin_send_file($pid, $plagiarismsettings, $file) {
               //  $tii['submit_date'] = rawurlencode(gmdate('Y-m-d H:i:s', $file->timestamp));
            // } else {
                 $tii['ptl']     = $file->get_filename(); //paper title
-                $tii['submit_date'] = rawurlencode(gmdate('Y-m-d H:i:s', $file->get_timemodified()));
+                $tii['submit_date'] = rawurlencode(date('Y-m-d H:i:s', $file->get_timemodified()));
            // }
             $tii['ptype']   = '2'; //filetype
             $tii['pfn']     = $tii['ufn'];
