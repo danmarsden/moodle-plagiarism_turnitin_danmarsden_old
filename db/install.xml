@@ -9,8 +9,8 @@
         <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" UNSIGNED="true" SEQUENCE="true" NEXT="cm"/>
         <FIELD NAME="cm" TYPE="int" LENGTH="10" NOTNULL="true" UNSIGNED="true" DEFAULT="0" SEQUENCE="false" PREVIOUS="id" NEXT="userid"/>
         <FIELD NAME="userid" TYPE="int" LENGTH="10" NOTNULL="true" UNSIGNED="true" DEFAULT="0" SEQUENCE="false" PREVIOUS="cm" NEXT="identifier"/>
-        <FIELD NAME="identifier" TYPE="text" LENGTH="small" NOTNULL="true" SEQUENCE="false" PREVIOUS="userid" NEXT="externalid"/>
-        <FIELD NAME="externalid" TYPE="text" LENGTH="small" NOTNULL="false" SEQUENCE="false" PREVIOUS="identifier" NEXT="externalstatus"/>
+        <FIELD NAME="identifier" TYPE="char" LENGTH="255" NOTNULL="true" SEQUENCE="false" PREVIOUS="userid" NEXT="externalid"/>
+        <FIELD NAME="externalid" TYPE="char" LENGTH="255" NOTNULL="false" SEQUENCE="false" PREVIOUS="identifier" NEXT="externalstatus"/>
         <FIELD NAME="externalstatus" TYPE="int" LENGTH="10" NOTNULL="false" UNSIGNED="true" DEFAULT="0" SEQUENCE="false" PREVIOUS="externalid" NEXT="statuscode"/>
         <FIELD NAME="statuscode" TYPE="char" LENGTH="10" NOTNULL="false" SEQUENCE="false" PREVIOUS="externalstatus" NEXT="similarityscore"/>
         <FIELD NAME="similarityscore" TYPE="int" LENGTH="5" NOTNULL="true" UNSIGNED="true" DEFAULT="0" SEQUENCE="false" PREVIOUS="statuscode"/>
@@ -25,8 +25,8 @@
       <FIELDS>
         <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" UNSIGNED="true" SEQUENCE="true" NEXT="cm"/>
         <FIELD NAME="cm" TYPE="int" LENGTH="10" NOTNULL="true" UNSIGNED="true" DEFAULT="0" SEQUENCE="false" PREVIOUS="id" NEXT="name"/>
-        <FIELD NAME="name" TYPE="text" LENGTH="small" NOTNULL="true" UNSIGNED="true" SEQUENCE="false" PREVIOUS="cm" NEXT="value"/>
-        <FIELD NAME="value" TYPE="text" LENGTH="small" NOTNULL="true" SEQUENCE="false" PREVIOUS="name"/>
+        <FIELD NAME="name" TYPE="char" LENGTH="255" NOTNULL="true" UNSIGNED="true" SEQUENCE="false" PREVIOUS="cm" NEXT="value"/>
+        <FIELD NAME="value" TYPE="char" LENGTH="255" NOTNULL="true" SEQUENCE="false" PREVIOUS="name"/>
       </FIELDS>
       <KEYS>
         <KEY NAME="primary" TYPE="primary" FIELDS="id" NEXT="cm"/>
