@@ -1081,7 +1081,7 @@ function turnitin_update_assignment($plagiarismsettings, $plagiarismvalues, $eve
             }
 
         } else {
-            mtrace("Error: could not create class and assign global instructor statuscode:".$rcode);
+            mtrace("Error: could not create class and assign global instructor statuscode:".$tiixml->rcode[0]);
             $return = false;
         }
     }
