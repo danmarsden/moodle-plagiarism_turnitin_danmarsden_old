@@ -86,8 +86,8 @@ $string['tiierror1023'] = 'Turnitin could not process this pdf - make sure it is
 $string['tiierror1024'] = 'Turnitin could not process this file - it does not meet the Turnitin criteria for a legitamate paper';
 $string['tiierrorpaperfail'] = 'Turnitin could not process this file.';
 $string['tiierrorpending'] ='File pending submission to Turnitin';
-$string['tiiexplain'] = 'Turnitin is a commercial product and you must have a paid subscription to use this service; for more information see <a href=\"http://docs.moodle.org/en/Turnitin_administration\">http://docs.moodle.org/en/Turnitin_administration</a>';
-$string['tiiexplainerrors'] = 'This page lists any files submitted to Turnitin that are currently in an error state. A list of turnitin Error codes and their description is available here:<a href=\"http://docs.moodle.org/en/Turnitin_errors\">docs.moodle.org/en/Turnitin_errors</a><br/>When files are reset, the cron will attempt to submit the file to turnitin again.<br/>When files are deleted on this page they will not be able to be resubmitted to turnitin and errors will no longer display to teachers or students';
+$string['tiiexplain'] = 'Turnitin is a commercial product and you must have a paid subscription to use this service; for more information see <a href="http://docs.moodle.org/en/Turnitin_administration">http://docs.moodle.org/en/Turnitin_administration</a>';
+$string['tiiexplainerrors'] = 'This page lists any files submitted to Turnitin that are currently in an error state. A list of turnitin Error codes and their description is available here:<a href="http://docs.moodle.org/en/Turnitin_errors">docs.moodle.org/en/Turnitin_errors</a><br/>When files are reset, the cron will attempt to submit the file to turnitin again.<br/>When files are deleted on this page they will not be able to be resubmitted to turnitin and errors will no longer display to teachers or students';
 $string['tiisecretkey'] ='Turnitin Secret Key';
 $string['tiisecretkey_help'] ='Log into Turnitin.com as your site administrator to obtain this.';
 $string['tiisenduseremail'] = 'Send User E-mail';
