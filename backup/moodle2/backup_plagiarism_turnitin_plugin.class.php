@@ -8,10 +8,8 @@ class backup_plagiarism_turnitin_plugin extends backup_plagiarism_plugin {
         // To know if we are including userinfo
         $userinfo = $this->get_setting_value('userinfo');
 
-        // Define the virtual plugin element with the condition to fulfill
-        // Note: we use $this->pluginname so for extended plugins this will work
-        // automatically: calculatedsimple and calculatedmulti
-        $plugin = $this->get_plugin_element(null, $this->check_turnitin_enabled(), 'turnitin');
+        // Define the virtual plugin element without conditions as the global class checks already.
+        $plugin = $this->get_plugin_element();
 
         // Create one standard named plugin element (the visible container)
         $pluginwrapper = new backup_nested_element($this->get_recommended_name());
@@ -39,10 +37,8 @@ class backup_plagiarism_turnitin_plugin extends backup_plagiarism_plugin {
     }
 
     function define_course_plugin_structure() {
-        // Define the virtual plugin element with the condition to fulfill
-        // Note: we use $this->pluginname so for extended plugins this will work
-        // automatically: calculatedsimple and calculatedmulti
-        $plugin = $this->get_plugin_element(null, $this->check_turnitin_enabled(), 'turnitin');
+        // Define the virtual plugin element without conditions as the global class checks already.
+        $plugin = $this->get_plugin_element();
 
         // Create one standard named plugin element (the visible container)
         $pluginwrapper = new backup_nested_element($this->get_recommended_name());
@@ -57,13 +53,5 @@ class backup_plagiarism_turnitin_plugin extends backup_plagiarism_plugin {
         $turnitinconfig->set_source_array(array('plagiarism_turnitin_course'=>get_config('plagiarism_turnitin_course', backup::VAR_COURSEID)));
         //get_config('plagiarism_turnitin_course', $course->id); //course ID
         return $plugin;
-    }
-    function check_turnitin_enabled() {
-        global $CFG;
-        //check this plugin is enabled
-        if (!empty($CFG->enableplagiarism) && get_config('plagiarism', "turnitin_use")) {
-            return array('sqlparam' => 'turnitin');
-        }
-        return array();
     }
 }
