@@ -45,13 +45,12 @@ class backup_plagiarism_turnitin_plugin extends backup_plagiarism_plugin {
 
         // connect the visible container ASAP
         $plugin->add_child($pluginwrapper);
-        //TODO: save id from turnitin course
+        //save id from turnitin course
         $turnitinconfigs = new backup_nested_element('turnitin_configs');
-        $turnitinconfig = new backup_nested_element('turnitin_config', array('id'), array('name', 'value'));
+        $turnitinconfig = new backup_nested_element('turnitin_config', array('id'), array('plugin', 'name', 'value'));
         $pluginwrapper->add_child($turnitinconfigs);
         $turnitinconfigs->add_child($turnitinconfig);
-        $turnitinconfig->set_source_array(array('plagiarism_turnitin_course'=>get_config('plagiarism_turnitin_course', backup::VAR_COURSEID)));
-        //get_config('plagiarism_turnitin_course', $course->id); //course ID
+        $turnitinconfig->set_source_table('config_plugins', array('name'=> backup::VAR_PARENTID, 'plugin' => array('sqlparam' => 'plagiarism_turnitin_course')));
         return $plugin;
     }
 }
