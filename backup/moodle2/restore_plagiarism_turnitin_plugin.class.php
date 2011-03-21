@@ -26,10 +26,10 @@ class restore_plagiarism_turnitin_plugin extends restore_plagiarism_plugin {
 
         if ($this->task->is_samesite()) { //files can only be restored if this is the same site as was backed up.
             //check to see if this plagiarism id already exists in a different course.
-            if (!$DB->record_exists('config_plugins', array('plugin'=>$data->plugin, 'value'=>$data->value))) {
+            if ($data->name == $this->task->get_courseid() || !$DB->record_exists('config_plugins', array('plugin'=>$data->plugin, 'value'=>$data->value))) {
                 //only restore if a link to this course doesn't already exist in this install.
                 $this->existingcourse = false;
-                set_config($this->task->get_moduleid(), $data->value, $data->plugin);
+                set_config($this->task->get_courseid(), $data->value, $data->plugin);
             } else {
                 $this->existingcourse = true;
             }
