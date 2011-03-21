@@ -23,12 +23,12 @@ class restore_plagiarism_turnitin_plugin extends restore_plagiarism_plugin {
 
         $data = (object)$data;
 
-        //TODO: check to see if this is being restored on the same site as it was backed up.
-
-        //check to see if this plagiarism id already exists in a different course.
-        if (!$DB->record_exists('config_plugins', array('plugin'=>$data->plugin, 'value'=>$data->value))) {
-            //only restore if a link to this course doesn't already exist in this install.
-            set_config($this->task->get_moduleid(), $data->value, $data->plugin);
+        if ($this->task->is_samesite()) { //files can only be restored if this is the same site as was backed up.
+            //check to see if this plagiarism id already exists in a different course.
+            if (!$DB->record_exists('config_plugins', array('plugin'=>$data->plugin, 'value'=>$data->value))) {
+                //only restore if a link to this course doesn't already exist in this install.
+                set_config($this->task->get_moduleid(), $data->value, $data->plugin);
+            }
         }
     }
 
@@ -53,22 +53,26 @@ class restore_plagiarism_turnitin_plugin extends restore_plagiarism_plugin {
 
     public function process_turnitinconfigmod($data) {
         global $DB;
-//TODO: add checks
-        $data = (object)$data;
-        $oldid = $data->id;
-        $data->cm = $this->task->get_moduleid();
+        if ($this->task->is_samesite()) { //files can only be restored if this is the same site as was backed up.
+//todo: add check to see if this data already exists in another course.
+            $data = (object)$data;
+            $oldid = $data->id;
+            $data->cm = $this->task->get_moduleid();
 
-        $DB->insert_record('turnitin_config', $data);
+            $DB->insert_record('turnitin_config', $data);
+        }
     }
 
     public function process_turnitinfiles($data) {
         global $DB;
-//TODO: add checks
-        $data = (object)$data;
-        $oldid = $data->id;
-        $data->cm = $this->task->get_moduleid();
-        $data->userid = $this->get_mappingid('user', $data->userid);
-        
-        $DB->insert_record('turnitin_files', $data);
+        if ($this->task->is_samesite()) { //files can only be restored if this is the same site as was backed up.
+//todo: add check to see if this data already exists in another course.
+            $data = (object)$data;
+            $oldid = $data->id;
+            $data->cm = $this->task->get_moduleid();
+            $data->userid = $this->get_mappingid('user', $data->userid);
+
+            $DB->insert_record('turnitin_files', $data);
+        }
     }
 }
