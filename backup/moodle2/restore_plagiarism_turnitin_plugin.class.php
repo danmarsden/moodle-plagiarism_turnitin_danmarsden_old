@@ -4,6 +4,7 @@ defined('MOODLE_INTERNAL') || die();
 
 
 class restore_plagiarism_turnitin_plugin extends restore_plagiarism_plugin {
+    protected $existingcourse;
     /**
      * Returns the paths to be handled by the plugin at question level
      */
@@ -27,8 +28,12 @@ class restore_plagiarism_turnitin_plugin extends restore_plagiarism_plugin {
             //check to see if this plagiarism id already exists in a different course.
             if (!$DB->record_exists('config_plugins', array('plugin'=>$data->plugin, 'value'=>$data->value))) {
                 //only restore if a link to this course doesn't already exist in this install.
+                $this->existingcourse = false;
                 set_config($this->task->get_moduleid(), $data->value, $data->plugin);
+            } else {
+                $this->existingcourse = true;
             }
+
         }
     }
 
@@ -53,7 +58,7 @@ class restore_plagiarism_turnitin_plugin extends restore_plagiarism_plugin {
 
     public function process_turnitinconfigmod($data) {
         global $DB;
-        if ($this->task->is_samesite()) { //files can only be restored if this is the same site as was backed up.
+        if ($this->task->is_samesite() && !$this->existingcourse) { //files can only be restored if this is the same site as was backed up.
 //todo: add check to see if this data already exists in another course.
             $data = (object)$data;
             $oldid = $data->id;
@@ -65,7 +70,7 @@ class restore_plagiarism_turnitin_plugin extends restore_plagiarism_plugin {
 
     public function process_turnitinfiles($data) {
         global $DB;
-        if ($this->task->is_samesite()) { //files can only be restored if this is the same site as was backed up.
+        if ($this->task->is_samesite() && !$this->existingcourse) { //files can only be restored if this is the same site as was backed up.
 //todo: add check to see if this data already exists in another course.
             $data = (object)$data;
             $oldid = $data->id;
