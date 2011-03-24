@@ -50,7 +50,7 @@ class backup_plagiarism_turnitin_plugin extends backup_plagiarism_plugin {
         $turnitinconfig = new backup_nested_element('turnitin_config', array('id'), array('plugin', 'name', 'value'));
         $pluginwrapper->add_child($turnitinconfigs);
         $turnitinconfigs->add_child($turnitinconfig);
-        $turnitinconfig->set_source_table('config_plugins', array('name'=> backup::VAR_PARENTID, 'plugin' => array('sqlparam' => 'plagiarism_turnitin_course')));
+        $turnitinconfig->set_source_table('config_plugins', array('name'=> backup::VAR_PARENTID, 'plugin' => backup_helper::is_sqlparam('plagiarism_turnitin_course')));
         return $plugin;
     }
 }
