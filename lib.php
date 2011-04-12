@@ -361,11 +361,50 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
      *
      */
     public function cron() {
-        global $CFG;
+        global $CFG, $DB;
         require_once("$CFG->libdir/filelib.php"); //HACK to include filelib so that when event cron is run then file_storage class is available
+        require_once("$CFG->dirroot/mod/assignment/lib.php"); //HACK to include filelib so that when event cron is run then file_storage class is available
         $plagiarismsettings = $this->get_settings();
         if ($plagiarismsettings) {
             turnitin_get_scores($plagiarismsettings);
+        }
+        //get list of files that need to be resubmitted - sanity check against cm
+        if (!empty($plagiarismsettings['turnitin_attempts']) && is_numeric($plagiarismsettings['turnitin_attempts'])
+            && !empty($plagiarismsettings['turnitin_attemptcodes'])) {
+
+            $attemptcodes = explode(',',trim($plagiarismsettings['turnitin_attemptcodes']));
+            list($usql, $params) = $DB->get_in_or_equal($attemptcodes);
+            $sql = "SELECT tf.*
+                    FROM {turnitin_files} tf, {course_modules} cm
+                    WHERE tf.cm = cm.id AND
+                    tf.statuscode $usql AND tf.attempt < ".$plagiarismsettings['turnitin_attempts'];
+            $items = $DB->get_records_sql($sql, $params);
+            foreach ($items as $item) {
+                    $foundfile = false;
+                    //TODO: hardcoded to assignment here - need to check for correct file location.
+                    $assignmentbase = new assignment_base($item->cm);
+                    $modulecontext = get_context_instance(CONTEXT_MODULE, $item->cm);
+                    $fs = get_file_storage();
+                    //TODO: check to see if there's a more efficient way to select just one file based on the id instead of iterating through all files to find it.
+                    $submission = $assignmentbase->get_submission($item->userid);
+                    if ($files = $fs->get_area_files($modulecontext->id, 'mod_assignment', 'submission',$submission->id)) {
+                        foreach ($files as $file) {
+                            if ($file->get_filename()==='.') {
+                                continue;
+                            }
+                            if ($file->get_contenthash() == $item->identifier) {
+                                $foundfile = true;
+                                $pid = plagiarism_update_record($item->cm, $item->userid, $file->get_contenthash(), $item->attempt+1);
+                                if (!empty($pid)) {
+                                    turnitin_send_file($pid, $plagiarismsettings, $file);
+                                }
+                            }
+                        }
+                    }
+                    if (!$foundfile) {
+                        debugging('file resubmit attempted but file not found id:'.$item->id, DEBUG_DEVELOPER);
+                    }
+            }
         }
     }
     public function event_handler($eventdata) {
@@ -413,6 +452,7 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
                         continue;
                     }
                     if (empty($plagiarismvalues['plagiarism_draft_submit'])) { //check if this is an advanced assignment and shouldn't send the file yet.
+                        //TODO - check if this particular file has already been submitted.
                         $pid = plagiarism_update_record($cmid, $eventdata->userid, $efile->get_contenthash());
                         if (!empty($pid)) {
                             $result = turnitin_send_file($pid, $plagiarismsettings, $efile);
@@ -422,11 +462,14 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
             } else { //this is a finalize event
                 mtrace("finalise");
                 if (isset($plagiarismvalues['plagiarism_draft_submit']) && $plagiarismvalues['plagiarism_draft_submit'] == 1) { // is file to be sent on final submission?
+                    require_once("$CFG->dirroot/mod/assignment/lib.php"); //HACK to include filelib so that when event cron is run then file_storage class is available
                     // we need to get a list of files attached to this assignment and put them in an array, so that
                     // we can submit each of them for processing.
+                    $assignmentbase = new assignment_base($cmid);
+                    $submission = $assignmentbase->get_submission($eventdata->userid);
                     $modulecontext = get_context_instance(CONTEXT_MODULE, $eventdata->cmid);
                     $fs = get_file_storage();
-                    if ($files = $fs->get_area_files($modulecontext->id, 'assignment_submission', $eventdata->userid, "timemodified", false, false)) {
+                    if ($files = $fs->get_area_files($modulecontext->id, 'mod_assignment', 'submission', $submission->id, "timemodified")) {
                         foreach ($files as $file) {
                             if ($file->get_filename()==='.') {
                                 continue;
@@ -1246,7 +1289,7 @@ function plagiarism_get_xml($url) {
  * @param varied $identifier  - identifier for this plagiarism record - hash of file, id of quiz question etc
  * @return int - id of turnitin_files record
  */
-function plagiarism_update_record($cmid, $userid, $identifier) {
+function plagiarism_update_record($cmid, $userid, $identifier, $attempt=0) {
     global $DB;
 
     //now update or insert record into turnitin_files
@@ -1265,6 +1308,7 @@ function plagiarism_update_record($cmid, $userid, $identifier) {
 
             $plagiarism_file->statuscode = 'pending';
             $plagiarism_file->similarityscore ='0';
+            $plagiarism_file->attempt = $attempt;
             $DB->update_record('turnitin_files', $plagiarism_file);
         }
         return $plagiarism_file->id;
@@ -1274,6 +1318,7 @@ function plagiarism_update_record($cmid, $userid, $identifier) {
         $plagiarism_file->userid = $userid;
         $plagiarism_file->identifier = $identifier;
         $plagiarism_file->statuscode = 'pending';
+        $plagiarism_file->attempt = $attempt;
         if (!$pid = $DB->insert_record('turnitin_files', $plagiarism_file)) {
             debugging("insert into turnitin_files failed");
         }

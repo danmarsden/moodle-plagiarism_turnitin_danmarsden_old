@@ -35,9 +35,16 @@ class turnitin_setup_form extends moodleform {
         $mform->addElement('checkbox', 'turnitin_senduseremail', get_string('tiisenduseremail', 'plagiarism_turnitin'));
         $mform->addHelpButton('turnitin_senduseremail', 'tiisenduseremail', 'plagiarism_turnitin');
 
-        /*$mform->addElement('text', 'turnitin_emailprefix', get_string('tiiemailprefix', 'plagiarism_turnitin'));
-        $mform->addHelpButton('turnitin_emailprefix', 'tiiemailprefix', 'plagiarism_turnitin');
-        $mform->disabledIf('turnitin_emailprefix', 'turnitin_senduseremail', 'checked');*/
+        $mform->addElement('text', 'turnitin_attemptcodes', get_string('turnitin_attemptcodes', 'plagiarism_turnitin'));
+        $mform->addHelpButton('turnitin_attemptcodes', 'turnitin_attemptcodes', 'plagiarism_turnitin');
+        $mform->setDefault('turnitin_attemptcodes', '1009,1013,1023');
+
+        $mform->addElement('text', 'turnitin_attempts', get_string('turnitin_attempts', 'plagiarism_turnitin'));
+        $mform->addHelpButton('turnitin_attempts', 'turnitin_attempts', 'plagiarism_turnitin');
+        $mform->addRule('turnitin_attempts', null, 'numeric', null, 'client');
+        $mform->addRule('turnitin_attempts', null, 'maxlength', 1, 'client');
+        $mform->setDefault('turnitin_attempts', '1');
+
 
         $mform->addElement('textarea', 'turnitin_student_disclosure', get_string('studentdisclosure','plagiarism_turnitin'),'wrap="virtual" rows="6" cols="50"');
         $mform->addHelpButton('turnitin_student_disclosure', 'studentdisclosure', 'plagiarism_turnitin');
