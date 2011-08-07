@@ -791,26 +791,30 @@ function turnitin_send_file($pid, $plagiarismsettings, $file) {
     //get information about this file
     $plagiarism_file = $DB->get_record('turnitin_files', array('id'=>$pid));
     $plagiarism_file->fileobject = $file; //store fileobject for use in submission.
-    //TODO: probably shouldn't use continue statements here anymore - maybe delete turnitin record as users/courses/modules have possibly been deleted?
+    $invalidrecord = false;
     if (!$user = $DB->get_record('user', array('id'=>$plagiarism_file->userid))) {
         debugging("invalid userid! - userid:".$plagiarism_file->userid." Module:".$moduletype." Fileid:".$plagiarism_file->id);
-        continue;
+        $invalidrecord = true;
     }
     if (!$cm = $DB->get_record('course_modules', array('id'=>$plagiarism_file->cm))) {
         debugging("invalid cmid! ".$plagiarism_file->cm." Fileid:".$plagiarism_file->id);
-        continue;
+        $invalidrecord = true;
     }
     if (!$course = $DB->get_record('course', array('id'=>$cm->course))) {
         debugging("invalid cmid! - courseid:".$cm->course." Module:".$moduletype." Fileid:".$plagiarism_file->id);
-        continue;
+        $invalidrecord = true;
     }
     if (!$moduletype = $DB->get_field('modules','name', array('id'=>$cm->module))) {
         debugging("invalid moduleid! - moduleid:".$cm->module." Module:".$moduletype." Fileid:".$plagiarism_file->id);
-        continue;
+        $invalidrecord = true;
     }
     if (!$module = $DB->get_record($moduletype, array('id'=>$cm->instance))) {
         debugging("invalid instanceid! - instance:".$cm->instance." Module:".$moduletype." Fileid:".$plagiarism_file->id);
-        continue;
+        $invalidrecord = true;
+    }
+    if ($invalidrecord) {
+        $DB->delete_records('turnitin_files', array('id'=>$plagiarism_file->id));
+        return true;
     }
     $dtstart = $DB->get_record_sql('SELECT * FROM {turnitin_config} WHERE cm = ? AND '.$DB->sql_compare_text('name'). "= ?", array($cm->id, 'turnitin_dtstart'));
     if (!empty($dtstart) && $dtstart->value+600 > time()) {
