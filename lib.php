@@ -316,12 +316,10 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
         //currently only used for grademark - check if enabled and return if not.
 
         if (!$moduletype = $DB->get_field('modules','name', array('id'=>$cm->module))) {
-            debugging("invalid moduleid! - moduleid:".$cm->module." Module:".$moduletype);
-            continue;
+            debugging("invalid moduleid! - moduleid:".$cm->module);
         }
         if (!$module = $DB->get_record($moduletype, array('id'=>$cm->instance))) {
             debugging("invalid instanceid! - instance:".$cm->instance." Module:".$moduletype);
-            continue;
         }
 
         //set globals.
@@ -1000,11 +998,11 @@ function turnitin_update_assignment($plagiarismsettings, $plagiarismvalues, $eve
     }
 
     if (!$module = $DB->get_record($eventdata->modulename, array('id'=>$cm->instance))) {
-        debugging("invalid instanceid! - instance:".$cm->instance." Module:".$moduletype, DEBUG_DEVELOPER);
+        debugging("invalid instanceid! - instance:".$cm->instance, DEBUG_DEVELOPER);
         return true; //don't let this event kill cron
     }
     if (!$user = $DB->get_record('user', array('id'=>$eventdata->userid))) {
-        debugging("invalid userid! - :".$eventdata->userid." Module:".$moduletype, DEBUG_DEVELOPER);
+        debugging("invalid userid! - :".$eventdata->userid, DEBUG_DEVELOPER);
         return true; //don't let this event kill cron
     }
     $tiisession = turnitin_start_session($user, $plagiarismsettings);
@@ -1358,7 +1356,7 @@ function plagiarism_get_css_rank ($score) {
 * @return string - string name of css class
 */
 function turnitin_get_tii_user($tii, $user, $plagiarismsettings) {
-    global $USER;
+    global $USER, $DB;
     if (is_int($user) && ($tii['utp'] == TURNITIN_STUDENT)) {
         //full user record needed
         $user = ($user == $USER->id ? $USER : $DB->get_record('user', array('id'=>$user)));
