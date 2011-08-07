@@ -100,7 +100,7 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
         $output = '';
 
         //check if this is a user trying to look at their details, or a teacher with viewsimilarityscore rights.
-        if (($USER->id == $userid) || has_capability('moodle/plagiarism_turnitin:viewsimilarityscore', $modulecontext)) {
+        if (($USER->id == $userid) || has_capability('plagiarism/turnitin:viewsimilarityscore', $modulecontext)) {
             if ($plagiarismsettings = $this->get_settings()) {
                 $plagiarismfile = $DB->get_record_sql(
                             "SELECT * FROM {turnitin_files}
@@ -119,8 +119,8 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
                     }
                     $assignclosed = false;
                     $rank = plagiarism_get_css_rank($plagiarismfile->similarityscore);
-                    if ($USER->id <> $userid) { //this is a teacher with moodle/plagiarism_turnitin:viewsimilarityscore
-                        if (has_capability('moodle/plagiarism_turnitin:viewfullreport', $modulecontext)) {
+                    if ($USER->id <> $userid) { //this is a teacher with plagiarism/turnitin:viewsimilarityscore
+                        if (has_capability('plagiarism/turnitin:viewfullreport', $modulecontext)) {
                             $output .= '<span class="plagiarismreport"><a href="'.turnitin_get_report_link($plagiarismfile, $COURSE, $plagiarismsettings).'" target="_blank">'.get_string('similarity', 'plagiarism_turnitin').':</a><span class="'.$rank.'">'.$plagiarismfile->similarityscore.'%</span></span>';
                         } else {
                             $output .= '<span class="plagiarismreport">'.get_string('similarity', 'plagiarism_turnitin').':<span class="'.$rank.'">'.$plagiarismfile->similarityscore.'%</span></span>';
@@ -207,7 +207,7 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
         }
         $plagiarismdefaults = $DB->get_records_menu('turnitin_config', array('cm'=>0),'','name,value'); //cmid(0) is the default list.
         $plagiarismelements = $this->config_options();
-        if (has_capability('moodle/plagiarism_turnitin:enable', $context)) {
+        if (has_capability('plagiarism/turnitin:enable', $context)) {
             turnitin_get_form_elements($mform);
             if ($mform->elementExists('plagiarism_draft_submit')) {
                 $mform->disabledIf('plagiarism_draft_submit', 'var4', 'eq', 0);

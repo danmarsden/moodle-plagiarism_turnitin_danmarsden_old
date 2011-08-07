@@ -22,6 +22,7 @@
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+$string['pluginname'] = 'Turnitin plagiarism plugin';
 $string['adminlogin'] = 'Login to Turnitin as Admin';
 $string['comparestudents'] = 'Compare submitted files with other students files';
 $string['comparestudents_help'] = 'This option allows submissions to be compared with other students files';
@@ -31,7 +32,7 @@ $string['compareinternet'] = 'Compare submitted files with Internet';
 $string['compareinternet_help'] = 'This option allows submissions to be compared with Internet content that  Turnitin currently indexes';
 $string['compareinstitution'] = 'Compare submitted files with papers submitted within this institution';
 $string['compareinstitution_help'] = 'This option is only available if you have setup/purchased a custom node. It should be set to "No" if unsure.';
-$string['configdefault'] = 'This is a default setting for the assignment creation page. Only users with the capability moodle/plagiarism_turnitin:enableturnitin can change this setting for an individual assignment';
+$string['configdefault'] = 'This is a default setting for the assignment creation page. Only users with the capability plagiarism/turnitin:enableturnitin can change this setting for an individual assignment';
 $string['configusetiimodule'] = 'Enable Turnitin submission.';
 $string['defaultupdated'] = 'Turnitin defaults updated';
 $string['defaultsdesc'] = 'The following settings are the defaults set when enabling Turnitin within an Activity Module';
@@ -108,3 +109,6 @@ $string['module'] = 'Module';
 $string['name'] = 'Name';
 $string['file'] = 'File';
 $string['status'] = 'Status';
+$string['turnitin:enable'] = 'Allow the teacher to enable/disable Turnitin inside a module';
+$string['turnitin:viewfullreport'] = 'Allow the teacher to view the full report returned from Turnitin';
+$string['turnitin:viewsimilarityscore'] = 'Allow the teacher to view the similarity score returned from Turnitin';
