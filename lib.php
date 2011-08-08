@@ -296,7 +296,7 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
         $tii['fcmd'] = TURNITIN_LOGIN; //when set to 2 this returns XML
         $tii['utp'] = TURNITIN_INSTRUCTOR;
         $tii['fid'] = TURNITIN_CREATE_USER; //set commands - Administrator login/statistics.
-        $tii = turnitin_get_tii_user($tii, $USER, $plagiarismsettings);
+        $tii = turnitin_get_tii_user($tii, $USER);
         echo '<div style="text-align:right"><a href="'.turnitin_get_url($tii, $plagiarismsettings).'" target="_blank">'.get_string("teacherlogin","plagiarism_turnitin").'</a></div>';
 
 
@@ -305,7 +305,7 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
             return;
         }
         $tii['utp']      = TURNITIN_INSTRUCTOR;
-        $tii = turnitin_get_tii_user($tii, $USER, $plagiarismsettings);
+        $tii = turnitin_get_tii_user($tii, $USER);
         $tii['cid']      = get_config('plagiarism_turnitin_course', $course->id); //course ID
         $tii['ctl']      = (strlen($course->shortname) > 45 ? substr($course->shortname, 0, 45) : $course->shortname);
         $tii['ctl']      = (strlen($tii['ctl']) > 5 ? $tii['ctl'] : $tii['ctl']."_____");
@@ -324,7 +324,7 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
 
         //set globals.
         $tii['utp']      = TURNITIN_INSTRUCTOR;
-        $tii = turnitin_get_tii_user($tii, $USER, $plagiarismsettings);
+        $tii = turnitin_get_tii_user($tii, $USER);
         $tii['cid']      = get_config('plagiarism_turnitin_course', $course->id); //course ID
         $tii['ctl']      = (strlen($course->shortname) > 45 ? substr($course->shortname, 0, 45) : $course->shortname);
         $tii['ctl']      = (strlen($tii['ctl']) > 5 ? $tii['ctl'] : $tii['ctl']."_____");
@@ -744,7 +744,7 @@ function turnitin_start_session($user, $plagiarismsettings) {
     $tii = array();
     //set globals.
     $tii['utp']      = TURNITIN_STUDENT;
-    $tii = turnitin_get_tii_user($tii, $user, $plagiarismsettings);
+    $tii = turnitin_get_tii_user($tii, $user);
     $tii['fcmd']     = TURNITIN_RETURN_XML;
     $tii['fid']      = TURNITIN_START_SESSION;
     $content = turnitin_get_url($tii, $plagiarismsettings);
@@ -769,7 +769,7 @@ function turnitin_end_session($user, $plagiarismsettings, $tiisession) {
     $tii = array();
     //set globals.
     $tii['utp']      = TURNITIN_STUDENT;
-    $tii = turnitin_get_tii_user($tii, $user, $plagiarismsettings);
+    $tii = turnitin_get_tii_user($tii, $user);
     $tii['fcmd']     = TURNITIN_RETURN_XML;
     $tii['fid']      = TURNITIN_END_SESSION;
     $tii['session-id'] = $tiisession;
@@ -824,7 +824,7 @@ function turnitin_send_file($pid, $plagiarismsettings, $file) {
     //now send the file.
     $tii = array();
     $tii['utp']      = TURNITIN_STUDENT;
-    $tii = turnitin_get_tii_user($tii, $user, $plagiarismsettings);
+    $tii = turnitin_get_tii_user($tii, $user);
     $tii['cid']      = get_config('plagiarism_turnitin_course', $course->id);
     $tii['ctl']      = (strlen($course->shortname) > 45 ? substr($course->shortname, 0, 45) : $course->shortname);
     $tii['ctl']      = (strlen($tii['ctl']) > 5 ? $tii['ctl'] : $tii['ctl']."_____");
@@ -904,7 +904,6 @@ function turnitin_send_file($pid, $plagiarismsettings, $file) {
 function turnitin_get_scores($plagiarismsettings) {
     global $DB;
 
-    $count = 0;
     mtrace("getting Turnitin scores");
     //first do submission
     //get all files set to "51" - success code for uploading.
@@ -915,12 +914,22 @@ function turnitin_get_scores($plagiarismsettings) {
             $user = $DB->get_record('user', array('id'=>$file->userid));
             $coursemodule = $DB->get_record('course_modules', array('id'=>$file->cm));
             $course = $DB->get_record('course', array('id'=>$coursemodule->course));
-            $tii['username'] = $user->username;
-            $tii['uem']      = $user->email;
-            $tii['ufn']      = $user->firstname;
-            $tii['uln']      = $user->lastname;
-            $tii['uid']      = $user->username;
-            $tii['utp']      = TURNITIN_STUDENT;
+            $mainteacher = $DB->get_field('turnitin_config', 'value', array('cm'=>$file->cm, 'name'=>'turnitin_mainteacher'));
+            if (!empty($mainteacher)) {
+                $tii['utp']      = TURNITIN_INSTRUCTOR;
+                $tii = turnitin_get_tii_user($tii, $mainteacher);
+            } else {
+                //check if set to never display report to student - if so we need to obtain a teacher account and use it.
+                $never = $DB->get_field('turnitin_config', 'value', array('cm'=>$file->cm, 'name'=>'plagiarism_show_student_report'));
+                if (empty($never)) {
+                    //TODO: the student can't get at the report so we need to assign a teacher
+                    debugging("ERROR: the scores can't be retrieved for courseid: ".$course->id. ", cm:".$file->cm." please edit and resave the assignment as a teacher, this will ensure all the correct settings have been made.");
+                    continue;
+                }
+                $tii['utp']      = TURNITIN_STUDENT;
+                $tii = turnitin_get_tii_user($tii, $user);
+            }
+
             $tii['cid']      = get_config('plagiarism_turnitin_course', $course->id);
             $tii['ctl']      = (strlen($course->shortname) > 45 ? substr($course->shortname, 0, 45) : $course->shortname);
             $tii['ctl']      = (strlen($tii['ctl']) > 5 ? $tii['ctl'] : $tii['ctl']."_____");
@@ -1010,7 +1019,7 @@ function turnitin_update_assignment($plagiarismsettings, $plagiarismvalues, $eve
         $tii = array();
         //set globals.
         $tii['utp']      = TURNITIN_INSTRUCTOR;
-        $tii = turnitin_get_tii_user($tii, $user, $plagiarismsettings);
+        $tii = turnitin_get_tii_user($tii, $user);
         $tii['session-id'] = $tiisession;
         $tii['ctl']      = (strlen($course->shortname) > 45 ? substr($course->shortname, 0, 45) : $course->shortname); //shouldn't happen but just in case!
         $tii['ctl']      = (strlen($tii['ctl']) > 5 ? $tii['ctl'] : $tii['ctl']."_____");
@@ -1038,6 +1047,14 @@ function turnitin_update_assignment($plagiarismsettings, $plagiarismvalues, $eve
         }
 
         if ($result) {
+            //save this teacher as the "main" teacher account for this assignment, use this teacher when retrieving reports:
+            if (!$DB->record_exists('turnitin_config',(array('cm'=>$cm->id, 'name'=>'turnitin_mainteacher')))) {
+                $configval = new stdclass();
+                $configval->cm = $cm->id;
+                $configval->name = 'turnitin_mainteacher';
+                $configval->value = $user->id;
+                $DB->insert_record('turnitin_config', $configval);
+            }
             //now create Assignment in Class
             //first check if this assignment has already been created
             if (empty($plagiarismvalues['turnitin_assignid'])) {
@@ -1159,10 +1176,10 @@ function turnitin_get_grademark_link($plagiarismfile, $course, $module, $plagiar
         $tii = array();
         if (!has_capability('mod/assignment:grade', get_context_instance(CONTEXT_MODULE, $plagiarismfile->cm))) {
             $tii['utp']      = TURNITIN_STUDENT;
-            $tii = turnitin_get_tii_user($tii, $USER, $plagiarismsettings);
+            $tii = turnitin_get_tii_user($tii, $USER);
         } else {
             $tii['utp']      = TURNITIN_INSTRUCTOR;
-            $tii = turnitin_get_tii_user($tii, $USER, $plagiarismsettings);
+            $tii = turnitin_get_tii_user($tii, $USER);
         }
         $tii['cid']      = get_config('plagiarism_turnitin_course', $course->id);
         $tii['ctl']      = (strlen($course->shortname) > 45 ? substr($course->shortname, 0, 45) : $course->shortname);
@@ -1185,7 +1202,7 @@ function turnitin_get_responsetime($plagiarismsettings) {
     $tii = array();
     //set globals.
     $tii['utp']      = TURNITIN_INSTRUCTOR;
-    $tii = turnitin_get_tii_user($tii, $USER, $plagiarismsettings);
+    $tii = turnitin_get_tii_user($tii, $USER);
     $tii['fcmd']     = TURNITIN_RETURN_XML;
     $tii['fid']      = TURNITIN_REPORT_TIME;
     $tiixml = plagiarism_get_xml(turnitin_get_url($tii, $plagiarismsettings));
@@ -1253,7 +1270,7 @@ function turnitin_get_report_link($file, $course, $plagiarismsettings) {
     } else {
         $tii['utp']      = TURNITIN_INSTRUCTOR;
     }
-    $tii = turnitin_get_tii_user($tii, $USER, $plagiarismsettings);
+    $tii = turnitin_get_tii_user($tii, $USER);
     $tii['cid']      = get_config('plagiarism_turnitin_course', $course->id);
     $tii['ctl']      = (strlen($course->shortname) > 45 ? substr($course->shortname, 0, 45) : $course->shortname);
     $tii['ctl']      = (strlen($tii['ctl']) > 5 ? $tii['ctl'] : $tii['ctl']."_____");
@@ -1355,9 +1372,9 @@ function plagiarism_get_css_rank ($score) {
 * @param $plagiarismsettings array()  - plagiarism settings array
 * @return string - string name of css class
 */
-function turnitin_get_tii_user($tii, $user, $plagiarismsettings) {
+function turnitin_get_tii_user($tii, $user) {
     global $USER, $DB;
-    if (is_int($user) && ($tii['utp'] == TURNITIN_STUDENT)) {
+    if (is_int($user)) {
         //full user record needed
         $user = ($user == $USER->id ? $USER : $DB->get_record('user', array('id'=>$user)));
     }

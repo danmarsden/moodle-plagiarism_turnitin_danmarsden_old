@@ -82,7 +82,7 @@
                 $tii['utp']   = TURNITIN_INSTRUCTOR;
                 $tii['fcmd']  = TURNITIN_RETURN_XML; 
                 $tii['fid']   = TURNITIN_CREATE_USER;
-                $tii = turnitin_get_tii_user($tii, $USER, $plagiarismsettings);
+                $tii = turnitin_get_tii_user($tii, $USER);
                 $tiixml = plagiarism_get_xml(turnitin_get_url($tii, $plagiarismsettings));
                 if (!empty($tiixml->rcode[0]) && $tiixml->rcode[0] == '11') {
                     notify(get_string('savedconfigsuccess', 'plagiarism_turnitin'), 'notifysuccess');
@@ -159,7 +159,7 @@
     if ($plagiarismsettings) {
         //Now show link to ADMIN tii interface - NOTE: this logs in the ADMIN user, should be hidden from normal teachers.
         $tii['utp'] = TURNITIN_ADMIN;
-        $tii = turnitin_get_tii_user($tii, $USER, $plagiarismsettings);
+        $tii = turnitin_get_tii_user($tii, $USER);
         $tii['fcmd'] = TURNITIN_LOGIN; //when set to 2 this returns XML
         $tii['fid'] = TURNITIN_ADMIN_STATS; //set commands - Administrator login/statistics.
         echo '<div align="center">';
