@@ -71,6 +71,7 @@ define('TURNITIN_RESP_ASSIGN_DELETED', 43); // Assignment deleted
 define('TURNITIN_RESP_PAPER_SENT', 51); // paper submitted
 define('TURNITIN_RESP_SCORE_RECEIVED', 61); // Originality score retrieved.
 define('TURNITIN_RESP_ASSIGN_EXISTS', 419); // Assignment already exists.
+define('TURNITIN_RESP_SCORE_NOT_READY', 415);
 
 //get global class
 global $CFG;
@@ -968,8 +969,14 @@ function turnitin_get_scores($plagiarismsettings) {
                 if (! $DB->update_record('turnitin_files', $file)) {
                     debugging("Error updating turnitin_files record");
                 }
-            } else {
-                 mtrace('similarity report not available yet for fileid:'.$file->id. " code:".$tiixml->rcode[0]);
+            } else if ($tiixml->rcode[0] == TURNITIN_RESP_SCORE_NOT_READY) {
+                mtrace('similarity report not available yet for fileid:'.$file->id. " code:".$tiixml->rcode[0]);
+            } else if (!empty($tiixml->rcode[0])) {
+                mtrace('similarity report check failed for fileid:'.$file->id. " code:".$tiixml->rcode[0]);
+                $file->statuscode = $tiixml->rcode[0];
+                if (! $DB->update_record('turnitin_files', $file)) {
+                    debugging("Error updating turnitin_files record");
+                }
             }
         }
     }
@@ -1051,7 +1058,7 @@ function turnitin_update_assignment($plagiarismsettings, $plagiarismvalues, $eve
         if (get_config('plagiarism_turnitin_course', $course->id)) {
             //course already exists - don't bother to create it.
             $tii['cid']      = get_config('plagiarism_turnitin_course', $course->id); //course ID
-            mtrace('courseexists - don\'t create');
+            //mtrace('courseexists - don\'t create');
         } else {
             //TODO: use some random unique id for cid
             $tii['cid']      = "c_".time().rand(10,5000); //some unique random id only used once.
@@ -1402,7 +1409,7 @@ function plagiarism_get_css_rank ($score) {
 */
 function turnitin_get_tii_user($tii, $user) {
     global $USER, $DB;
-    if (is_int($user)) {
+    if (is_number($user)) {
         //full user record needed
         $user = ($user == $USER->id ? $USER : $DB->get_record('user', array('id'=>$user)));
     }
