@@ -114,3 +114,4 @@ $string['turnitin:viewfullreport'] = 'Allow the teacher to view the full report 
 $string['turnitin:viewsimilarityscore'] = 'Allow the teacher to view the similarity score returned from Turnitin';
 $string['userprofileteachercache'] = 'Turnitin teacher course cache';
 $string['userprofileteachercache_desc'] = 'This field is used by the Turnitin plugin to keep a record of all the courses that a teacher has been assigned as a teacher in. - you can clear this field but it may affect performance.';
+$string['errorassigninguser'] = 'An error occured when trying to assign this user to the external Turnitin system - Turnitin links on this page may not work';

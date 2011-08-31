@@ -287,10 +287,35 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
     }
 
     public function update_status($course, $cm) {
-        global $DB, $USER;
+        global $DB, $USER, $OUTPUT;
+        $userprofilefieldname = 'turnitinteachercoursecache';
         if (!$plagiarismsettings = $this->get_settings()) {
             return;
         }
+
+        //first check coursecache user info field to see if this user is already a member of the Turnitin course.
+        if (empty($USER->profile[$userprofilefieldname]) || !in_array($course->id, explode(',',$USER->profile[$userprofilefieldname]))) {
+            $existingcourses = explode(',',$USER->profile[$userprofilefieldname]);
+            $userprofilefieldid = $DB->get_field('user_info_field', 'id', array('shortname'=>$userprofilefieldname));
+            $tii = array();
+            $tii['utp']      = TURNITIN_INSTRUCTOR;
+            $tii = turnitin_get_tii_user($tii, $USER);
+            $tii['cid']      = get_config('plagiarism_turnitin_course', $course->id); //course ID
+            $tii['ctl']      = (strlen($course->shortname) > 45 ? substr($course->shortname, 0, 45) : $course->shortname);
+            $tii['ctl']      = (strlen($tii['ctl']) > 5 ? $tii['ctl'] : $tii['ctl']."_____");
+            $tii['fcmd'] = TURNITIN_RETURN_XML;
+            $tii['fid']  = TURNITIN_CREATE_CLASS;
+            $tiixml = plagiarism_get_xml(turnitin_get_url($tii, $plagiarismsettings));
+            if ($tiixml->rcode[0] != TURNITIN_RESP_CLASS_CREATED) {
+                $OUTPUT->notification(get_string('errorassigninguser','plagiarism_turnitin'));
+                return;
+            }
+            $existingcourses[] = $course->id;
+            $newcoursecache =  implode(',',$existingcourses);
+            $DB->set_field('user_info_data','data', $newcoursecache,array('userid'=>$USER->id, 'fieldid'=>$userprofilefieldid));
+            $USER->profile[$userprofilefieldname] = $newcoursecache;
+        }
+
         $tii = array();
         //print link to teacher login
         $tii['fcmd'] = TURNITIN_LOGIN; //when set to 2 this returns XML
@@ -299,17 +324,6 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
         $tii = turnitin_get_tii_user($tii, $USER);
         echo '<div style="text-align:right"><a href="'.turnitin_get_url($tii, $plagiarismsettings).'" target="_blank">'.get_string("teacherlogin","plagiarism_turnitin").'</a></div>';
 
-
-
-        $tii['utp']      = TURNITIN_INSTRUCTOR;
-        $tii = turnitin_get_tii_user($tii, $USER);
-        $tii['cid']      = get_config('plagiarism_turnitin_course', $course->id); //course ID
-        $tii['ctl']      = (strlen($course->shortname) > 45 ? substr($course->shortname, 0, 45) : $course->shortname);
-        $tii['ctl']      = (strlen($tii['ctl']) > 5 ? $tii['ctl'] : $tii['ctl']."_____");
-        $tii['fcmd'] = TURNITIN_RETURN_XML;
-        $tii['fid']  = TURNITIN_CREATE_CLASS; // create class under the given account and assign above user as instructor (fid=2)
-        //$tii['diagnostic'] = '1';
-        $tiixml = plagiarism_get_xml(turnitin_get_url($tii, $plagiarismsettings));
         //currently only used for grademark - check if enabled and return if not.
         //TODO: This call degrades page performance - need to run less frequently.
         if (empty($plagiarismsettings['turnitin_enablegrademark'])) {
@@ -948,6 +962,7 @@ function turnitin_get_scores($plagiarismsettings) {
             $tii['oid']      = $file->externalid;
             $tiixml = plagiarism_get_xml(turnitin_get_url($tii, $plagiarismsettings, false, $file->id));
             if ($tiixml->rcode[0] == TURNITIN_RESP_SCORE_RECEIVED) { //this is the success code for uploading a file. - we need to return the oid and save it!
+                $file = $DB->get_record('turnitin_files', array('id'=>$file->id)); //make sure we get latest record as it may have changed
                 $file->similarityscore = $tiixml->originalityscore[0];
                 $file->statuscode = 'success';
                 if (! $DB->update_record('turnitin_files', $file)) {
