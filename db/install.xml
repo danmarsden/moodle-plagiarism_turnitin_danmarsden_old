@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<XMLDB PATH="plagiarism/turnitin/db" VERSION="20090420" COMMENT="XMLDB file for Moodle plagiarism/turnitin plugin"
+<XMLDB PATH="plagiarism/turnitin/db" VERSION="20110831" COMMENT="XMLDB file for Moodle plagiarism/turnitin plugin"
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
     xsi:noNamespaceSchemaLocation="../../../lib/xmldb/xmldb.xsd"
 >
   <TABLES>
-      <TABLE NAME="turnitin_files" COMMENT="info about submitted files" NEXT="turnitin_config">
+    <TABLE NAME="turnitin_files" COMMENT="info about submitted files" NEXT="turnitin_config">
       <FIELDS>
         <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" UNSIGNED="true" SEQUENCE="true" NEXT="cm"/>
         <FIELD NAME="cm" TYPE="int" LENGTH="10" NOTNULL="true" UNSIGNED="true" DEFAULT="0" SEQUENCE="false" PREVIOUS="id" NEXT="userid"/>
@@ -14,7 +14,8 @@
         <FIELD NAME="externalstatus" TYPE="int" LENGTH="10" NOTNULL="false" UNSIGNED="true" DEFAULT="0" SEQUENCE="false" PREVIOUS="externalid" NEXT="statuscode"/>
         <FIELD NAME="statuscode" TYPE="char" LENGTH="10" NOTNULL="false" SEQUENCE="false" PREVIOUS="externalstatus" NEXT="similarityscore"/>
         <FIELD NAME="similarityscore" TYPE="int" LENGTH="5" NOTNULL="true" UNSIGNED="true" DEFAULT="0" SEQUENCE="false" PREVIOUS="statuscode" NEXT="attempt"/>
-        <FIELD NAME="attempt" TYPE="int" LENGTH="5" NOTNULL="true" UNSIGNED="true" DEFAULT="0" SEQUENCE="false" PREVIOUS="similarityscore"/>
+        <FIELD NAME="attempt" TYPE="int" LENGTH="5" NOTNULL="true" UNSIGNED="true" DEFAULT="0" SEQUENCE="false" PREVIOUS="similarityscore" NEXT="apimd5"/>
+        <FIELD NAME="apimd5" TYPE="char" LENGTH="255" NOTNULL="false" SEQUENCE="false" COMMENT="This is the md5 used in the last api call to Turnitin" PREVIOUS="attempt"/>
       </FIELDS>
       <KEYS>
         <KEY NAME="primary" TYPE="primary" FIELDS="id" NEXT="cm"/>
@@ -26,7 +27,7 @@
       <FIELDS>
         <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" UNSIGNED="true" SEQUENCE="true" NEXT="cm"/>
         <FIELD NAME="cm" TYPE="int" LENGTH="10" NOTNULL="true" UNSIGNED="true" DEFAULT="0" SEQUENCE="false" PREVIOUS="id" NEXT="name"/>
-        <FIELD NAME="name" TYPE="char" LENGTH="255" NOTNULL="true" UNSIGNED="true" SEQUENCE="false" PREVIOUS="cm" NEXT="value"/>
+        <FIELD NAME="name" TYPE="char" LENGTH="255" NOTNULL="true" SEQUENCE="false" PREVIOUS="cm" NEXT="value"/>
         <FIELD NAME="value" TYPE="char" LENGTH="255" NOTNULL="true" SEQUENCE="false" PREVIOUS="name"/>
       </FIELDS>
       <KEYS>

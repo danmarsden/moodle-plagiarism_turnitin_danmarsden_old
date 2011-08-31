@@ -37,5 +37,21 @@ function xmldb_plagiarism_turnitin_upgrade($oldversion) {
         }
         upgrade_plugin_savepoint(true, 2011041200, 'plagiarism','turnitin');
     }
+
+    if ($oldversion < 2011083100) {
+
+        // Define field apimd5 to be added to turnitin_files
+        $table = new xmldb_table('turnitin_files');
+        $field = new xmldb_field('apimd5', XMLDB_TYPE_CHAR, '255', null, null, null, null, 'attempt');
+
+        // Conditionally launch add field apimd5
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+
+        // turnitin savepoint reached
+        upgrade_plugin_savepoint(true, 2011083100, 'plagiarism', 'turnitin');
+    }
+
     return true;
 }
