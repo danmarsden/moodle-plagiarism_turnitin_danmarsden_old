@@ -115,3 +115,5 @@ $string['turnitin:viewsimilarityscore'] = 'Allow the teacher to view the similar
 $string['userprofileteachercache'] = 'Turnitin teacher course cache';
 $string['userprofileteachercache_desc'] = 'This field is used by the Turnitin plugin to keep a record of all the courses that a teacher has been assigned as a teacher in. - you can clear this field but it may affect performance.';
 $string['errorassigninguser'] = 'An error occured when trying to assign this user to the external Turnitin system - Turnitin links on this page may not work';
+$string['anonymity'] = 'Make student submissions anonymous within Turnitin';
+$string['anonymity_help'] = 'This will prevent teachers from being able to see which student is which by going to the Turnitin interface at submit.ac.uk. Essential if the module is trying to enforce anonymity.';
