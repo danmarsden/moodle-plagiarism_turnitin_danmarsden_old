@@ -284,7 +284,7 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
                      'plagiarism_draft_submit','plagiarism_compare_student_papers','plagiarism_compare_internet',
                      'plagiarism_compare_journals','plagiarism_compare_institution','plagiarism_report_gen',
                      'plagiarism_exclude_biblio','plagiarism_exclude_quoted','plagiarism_exclude_matches',
-                     'plagiarism_exclude_matches_value');
+                     'plagiarism_exclude_matches_value','plagiarism_anonymity');
     }
 
     public function update_status($course, $cm) {
@@ -1131,6 +1131,9 @@ function turnitin_update_assignment($plagiarismsettings, $plagiarismvalues, $eve
             $tii['exclude_value']     = (isset($plagiarismvalues['plagiarism_exclude_matches_value']) ? $plagiarismvalues['plagiarism_exclude_matches_value'] : '');
             $tii['ainst']             = (!empty($module->intro) ? $module->intro : '');
             $tii['max_points']        = (!empty($module->grade) && $module->grade > 0 ? ceil($module->grade) : '0');
+            if (isset($plagiarismvalues['plagiarism_anonymity'])) {
+                $tii['anon'] = $plagiarismvalues['plagiarism_anonymity'] ? 1 : 0;
+            }
             //$tii['diagnostic'] = '1'; //debug only - uncomment when using in production.
 
             $tiixml = turnitin_post_data($tii, $plagiarismsettings);
@@ -1281,6 +1284,8 @@ function turnitin_get_form_elements($mform) {
         $mform->addElement('text', 'plagiarism_exclude_matches_value', '');
         $mform->addRule('plagiarism_exclude_matches_value', null, 'numeric', null, 'client');
         $mform->disabledIf('plagiarism_exclude_matches_value', 'plagiarism_exclude_matches', 'eq', 0);
+        $mform->addElement('select', 'plagiarism_anonymity', get_string("anonymity", "plagiarism_turnitin"), $ynoptions);
+        $mform->addHelpButton('plagiarism_anonymity', 'anonymity', 'plagiarism_turnitin');
 }
 
 /**
