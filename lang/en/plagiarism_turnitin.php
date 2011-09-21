@@ -117,3 +117,5 @@ $string['userprofileteachercache_desc'] = 'This field is used by the Turnitin pl
 $string['errorassigninguser'] = 'An error occured when trying to assign this user to the external Turnitin system - Turnitin links on this page may not work';
 $string['anonymity'] = 'Make student submissions anonymous within Turnitin';
 $string['anonymity_help'] = 'This will prevent teachers from being able to see which student is which by going to the Turnitin interface at submit.ac.uk. Essential if the module is trying to enforce anonymity.';
+$string['missingkey'] = 'Turnitin Secret Key not set!';
+$string['fileopenerror'] = 'error trying to open plagiarism XML file! {$a}';
