@@ -272,7 +272,7 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
         if (isset($plagiarismsettings['turnitin_use']) && $plagiarismsettings['turnitin_use'] && isset($plagiarismsettings['turnitin_accountid']) && $plagiarismsettings['turnitin_accountid']) {
             //now check to make sure required settings are set!
             if (empty($plagiarismsettings['turnitin_secretkey'])) {
-                error("Turnitin Secret Key not set!");
+                print_error('missingkey', 'plagiarism_turnitin');
             }
             return $plagiarismsettings;
         } else {
@@ -1326,7 +1326,7 @@ function plagiarism_get_xml($url) {
     global $CFG;
     require_once($CFG->libdir."/filelib.php");
     if (!($fp = download_file_content($url))) {
-        error("error trying to open plagiarism XML file!".$url);
+        print_error('fileopenerror', 'plagiarism_turnitin', '', $url);
     } else {
             //now do something with the XML file to check to see if this has worked!
         $xml = new SimpleXMLElement($fp);
