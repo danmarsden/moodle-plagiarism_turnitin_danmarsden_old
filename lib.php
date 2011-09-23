@@ -298,7 +298,7 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
     private function get_assign_name($name, $cmid) {
         $suffix   = '-'.$cmid; // suffix first, so we can keep it 90 chars even if cmid is long
         $maxnamelength = 90 - strlen($suffix);
-        $shortname = (strlen($module->name) > $maxnamelength) ? substr($module->name, 0, $maxnamelength) : $module->name;
+        $shortname = (strlen($name) > $maxnamelength) ? substr($name, 0, $maxnamelength) : $name;
         return $shortname.$suffix;
     }
 
