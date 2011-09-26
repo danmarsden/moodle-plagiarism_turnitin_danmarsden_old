@@ -16,7 +16,7 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * lib.php - Contains Turnitin soecific functions called by Modules.
+ * lib.php - Contains Turnitin specific functions called by Modules.
  *
  * @since 2.0
  * @package    plagiarism_turnitin
@@ -286,21 +286,6 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
                      'plagiarism_exclude_biblio','plagiarism_exclude_quoted','plagiarism_exclude_matches',
                      'plagiarism_exclude_matches_value','plagiarism_anonymity');
     }
-    
-    /**
-     * Helper function that makes the name of the module and the coursemoduleid into a concatentated string.
-     * This avoid naming collisions in courses where duplicate names have been used for activities.
-     * 
-     * @param string $name the name of the activity e.g. 'End of term essay'
-     * @param int $cmid The id of the moodle coursemodule for this activity
-     * @return string
-     */
-    private function get_assign_name($name, $cmid) {
-        $suffix   = '-'.$cmid; // suffix first, so we can keep it 90 chars even if cmid is long
-        $maxnamelength = 90 - strlen($suffix);
-        $shortname = (strlen($name) > $maxnamelength) ? substr($name, 0, $maxnamelength) : $name;
-        return $shortname.$suffix;
-    }
 
     public function update_status($course, $cm) {
         global $DB, $USER, $OUTPUT;
@@ -362,7 +347,7 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
         if (!empty($turnitin_assignid)) {
             $tii['assignid'] = $turnitin_assignid;
         }
-        $tii['assign']   = $this->get_assign_name($module->name, $cm->id); //assignment name stored in TII
+        $tii['assign']   = turnitin_get_assign_name($module->name, $cm->id); //assignment name stored in TII
         $tii['fcmd']     = TURNITIN_RETURN_XML;
         $tii['fid']      = TURNITIN_LIST_SUBMISSIONS;
         $tiixml = plagiarism_get_xml(turnitin_get_url($tii, $plagiarismsettings));
@@ -889,7 +874,7 @@ function turnitin_send_file($pid, $plagiarismsettings, $file) {
         if (!empty($turnitin_assignid)) {
             $tii['assignid'] = $turnitin_assignid;
         }
-        $tii['assign']   = $this->get_assign_name($module->name, $cm->id); //assignment name stored in TII
+        $tii['assign']   = turnitin_get_assign_name($module->name, $cm->id); //assignment name stored in TII
         $tii['fid']      = TURNITIN_JOIN_CLASS;
         //$tii2['diagnostic'] = '1';
         $tiixml = plagiarism_get_xml(turnitin_get_url($tii, $plagiarismsettings, false, $pid));
@@ -1122,7 +1107,7 @@ function turnitin_update_assignment($plagiarismsettings, $plagiarismvalues, $eve
                     $tii['dtdue']    = rawurlencode(date('Y-m-d H:i:s', $module->timedue));
                 }
             }
-            $tii['assign']   = $this->get_assign_name($module->name, $cm->id); //assignment name stored in TII
+            $tii['assign']   = turnitin_get_assign_name($module->name, $cm->id); //assignment name stored in TII
             $tii['fid']      = TURNITIN_CREATE_ASSIGNMENT;
             $tii['ptl']      = $course->id.$course->shortname; //paper title? - assname?
             $tii['ptype']    = TURNITIN_TYPE_FILE; //filetype
@@ -1468,4 +1453,19 @@ function turnitin_event_mod_deleted($eventdata) {
     $eventdata->eventtype = 'mod_deleted';
     $turnitin = new plagiarism_plugin_turnitin();
     return $turnitin->event_handler($eventdata);
+}
+
+/**
+ * Helper function that makes the name of the module and the coursemoduleid into a concatentated string.
+ * This avoid naming collisions in courses where duplicate names have been used for activities.
+ *
+ * @param string $name the name of the activity e.g. 'End of term essay'
+ * @param int $cmid The id of the moodle coursemodule for this activity
+ * @return string
+ */
+function tunrnitin_get_assign_name($name, $cmid) {
+    $suffix   = '-'.$cmid; // suffix first, so we can keep it 90 chars even if cmid is long
+    $maxnamelength = 90 - strlen($suffix);
+    $shortname = (strlen($name) > $maxnamelength) ? substr($name, 0, $maxnamelength) : $name;
+    return $shortname.$suffix;
 }
