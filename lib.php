@@ -166,7 +166,7 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
         if ($plagiarismsettings = $this->get_settings()) {
                 $plagiarismfile = $DB->get_record('turnitin_files', array('cm'=>$cmid,
                                                                             'userid'=>$userid,
-                                                                            'identifier'=>$file->get_id()));
+                                                                            'identifier'=>$file->get_contenthash()));
                 print_object($plagiarismfile);
         }
         return "";
@@ -489,7 +489,7 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
                                 continue;
                             }
                             //TODO: need to check if this file has already been sent! - possible that the file was sent before draft submit was set.
-                            $pid = plagiarism_update_record($cmid, $eventdata->userid, $file->get_id());
+                            $pid = plagiarism_update_record($cmid, $eventdata->userid, $file->get_contenthash());
                             if (!empty($pid)) {
                                 $result = turnitin_send_file($pid, $plagiarismsettings, $file);
                             }
