@@ -423,12 +423,6 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
     public function event_handler($eventdata) {
         global $DB, $CFG;
         $result = true;
-        $supportedmodules = array('assignment', 'quiz');
-        if (empty($eventdata->modulename) || !in_array($eventdata->modulename, $supportedmodules)) {
-            //debugging("this module isn't handled:".$eventdata->modulename); //TODO: remove this debug when working.
-            return true;
-        }
-        
         $plagiarismsettings = $this->get_settings();
         $cmid = (!empty($eventdata->cm->id)) ? $eventdata->cm->id : $eventdata->cmid;
         $plagiarismvalues = $DB->get_records_menu('turnitin_config', array('cm'=>$cmid),'','name,value');
