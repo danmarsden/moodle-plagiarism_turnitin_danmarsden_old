@@ -112,7 +112,6 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
            return '';
         }
         $modulecontext = get_context_instance(CONTEXT_MODULE, $cmid);
-        $output = '';
 
         if ($USER->id == $userid) {
             // The user wants to see details on their own report
@@ -120,9 +119,19 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
         } else {
             $selfreport = false;
         }
-        // Whether the user has permissions to see all similarity reports in the context of this module.
+        // Whether the user has permissions to see all items in the context of this module.
         $viewsimilarityscore = has_capability('plagiarism/turnitin:viewsimilarityscore', $modulecontext);
-        if (!$selfreport && !$viewsimilarityscore) {
+        $viewfullreport = has_capability('plagiarism/turnitin:viewfullreport', $modulecontext);
+
+        if ($selfreport) {
+            if ($plagiarismvalues['plagiarism_show_student_score'] == PLAGIARISM_TII_SHOW_ALWAYS) {
+                $viewsimilarityscore = true;
+            }
+            if ($plagiarismvalues['plagiarism_show_student_report'] == PLAGIARISM_TII_SHOW_ALWAYS) {
+                $viewfullreport = true;
+            }
+        }
+        if (!$viewsimilarityscore && !$viewfullreport) {
             // The user has no right to see the requested detail.
             return '<br />';
         }
@@ -144,58 +153,32 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
 
         if(isset($plagiarismfile->statuscode) && $plagiarismfile->statuscode !== 'success') {
             //always display errors - even if the student isn't able to see report/score.
-            $output .= turnitin_error_text($plagiarismfile->statuscode);
+            $output = turnitin_error_text($plagiarismfile->statuscode);
             return $output . "<br />";
         }
 
         // TII has successfully returned a score.
         $rank = plagiarism_get_css_rank($plagiarismfile->similarityscore);
-        if ($USER->id <> $userid) { //this is a teacher with plagiarism/turnitin:viewsimilarityscore
-            if (has_capability('plagiarism/turnitin:viewfullreport', $modulecontext)) {
-                $output .= '<span class="plagiarismreport"><a href="'.turnitin_get_report_link($plagiarismfile, $COURSE, $plagiarismsettings).'" target="_blank">'.get_string('similarity', 'plagiarism_turnitin').':</a><span class="'.$rank.'">'.$plagiarismfile->similarityscore.'%</span></span>';
-            } else {
-                $output .= '<span class="plagiarismreport">'.get_string('similarity', 'plagiarism_turnitin').':<span class="'.$rank.'">'.$plagiarismfile->similarityscore.'%</span></span>';
-            }
-        } elseif (isset($plagiarismvalues['plagiarism_show_student_report']) && isset($plagiarismvalues['plagiarism_show_student_score']) and //if report and score fields are set.
-                 ($plagiarismvalues['plagiarism_show_student_report'] == PLAGIARISM_TII_SHOW_ALWAYS or
-                  $plagiarismvalues['plagiarism_show_student_score'] == PLAGIARISM_TII_SHOW_ALWAYS)) {
 
-            if ($plagiarismvalues['plagiarism_show_student_report'] == PLAGIARISM_TII_SHOW_ALWAYS) {
-                $output .= '<span class="plagiarismreport"><a href="'.turnitin_get_report_link($plagiarismfile, $COURSE, $plagiarismsettings).'" target="_blank">'.get_string('similarity', 'plagiarism_turnitin').'</a>';
-                if ($plagiarismvalues['plagiarism_show_student_score'] == PLAGIARISM_TII_SHOW_ALWAYS) {
-                    $output .= ':<span class="'.$rank.'">'.$plagiarismfile->similarityscore.'%</span>';
-                }
-                $output .= '</span>';
-            } else {
-                $output .= '<span class="plagiarismreport">'.get_string('similarity', 'plagiarism_turnitin').':<span class="'.$rank.'">'.$plagiarismfile->similarityscore.'%</span>';
-            }
+        $similaritystring = '<span class="' . $rank . '">' . $plagiarismfile->similarityscore . '%</span>';
+        if ($viewfullreport) {
+            // User gets to see link to similarity report & similarity score
+            $output = '<span class="plagiarismreport"><a href="'.turnitin_get_report_link($plagiarismfile, $COURSE, $plagiarismsettings).'" target="_blank">';
+            $output .= get_string('similarity', 'plagiarism_turnitin').':</a>' . $similaritystring . '</span>';
+        } elseif ($viewsimilarityscore) {
+            // User only sees similarity score
+            $output = '<span class="plagiarismreport">' . get_string('similarity', 'plagiarism_turnitin') . $similaritystring . '</span>';
+        } else {
+            $output = '';
         }
+
         //now check if grademark enabled and return the status of this file.
         if (!empty($plagiarismsettings['turnitin_enablegrademark'])) {
                 $output .= '<span class="grademark">'.turnitin_get_grademark_link($plagiarismfile, $COURSE, $module, $plagiarismsettings)."</span>";
         }
         return $output.'<br/>';
     }
-    /*public function get_quiz_links($question, $state, $cmoptions, $options) {
-        //print_object($question);
-                print_object($state);
-                        print_object($cmoptions);
-          //                      print_object($options);
-        global $DB, $CFG, $USER;
-        $plagiarismvalues = $DB->get_records_menu('turnitin_config', array('cm'=>$cmid),'','name,value');
-        if (empty($plagiarismvalues['use_turnitin'])) {
-            //nothing to do here... move along!
-           return '';
-        }
-        $modulecontext = get_context_instance(CONTEXT_MODULE, $cmoptions->cmid);
-        if ($plagiarismsettings = $this->get_settings()) {
-                $plagiarismfile = $DB->get_record('turnitin_files', array('cm'=>$cmid,
-                                                                            'userid'=>$userid,
-                                                                            'identifier'=>$file->get_contenthash()));
-                print_object($plagiarismfile);
-        }
-        return "";
-    }*/
+
     public function save_form_elements($data) {
             global $DB;
         if (!$this->get_settings()) {
