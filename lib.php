@@ -92,8 +92,18 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
         if (isset($linkarray['assignment'])) {
             $module = $linkarray['assignment'];
         } else {
-            $sql = "SELECT a.* FROM {assignment} a, {course_modules} cm WHERE cm.id= ? AND cm.instance = a.id";
-            $module = $DB->get_record_sql($sql, array($cmid));
+            $modulesql = 'SELECT m.id, m.name, cm.instance'.
+                    ' FROM {course_modules} cm' .
+                    ' INNER JOIN {modules} m on cm.module = m.id ' .
+                    'WHERE cm.id = ?';
+            $moduledetail = $DB->get_record_sql($modulesql, array($cmid));
+            if (!empty($moduledetail)) {
+                $sql = "SELECT * FROM {?} WHERE id= ?";
+                $module = $DB->get_record_sql($sql, array($moduledetail->name, $moduledetail->instance));
+            }
+        }
+        if (empty($module)) {
+            return '';
         }
 
         $plagiarismvalues = $DB->get_records_menu('turnitin_config', array('cm'=>$cmid),'','name,value');
