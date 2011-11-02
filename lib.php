@@ -149,7 +149,6 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
         }
 
         // TII has successfully returned a score.
-        $assignclosed = false;
         $rank = plagiarism_get_css_rank($plagiarismfile->similarityscore);
         if ($USER->id <> $userid) { //this is a teacher with plagiarism/turnitin:viewsimilarityscore
             if (has_capability('plagiarism/turnitin:viewfullreport', $modulecontext)) {
@@ -159,13 +158,11 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
             }
         } elseif (isset($plagiarismvalues['plagiarism_show_student_report']) && isset($plagiarismvalues['plagiarism_show_student_score']) and //if report and score fields are set.
                  ($plagiarismvalues['plagiarism_show_student_report'] == PLAGIARISM_TII_SHOW_ALWAYS or
-                  $plagiarismvalues['plagiarism_show_student_score'] == PLAGIARISM_TII_SHOW_ALWAYS or
-                 ($plagiarismvalues['plagiarism_show_student_score'] == PLAGIARISM_TII_SHOW_CLOSED && $assignclosed) or
-                 ($plagiarismvalues['plagiarism_show_student_report'] == PLAGIARISM_TII_SHOW_CLOSED && $assignclosed))) {
+                  $plagiarismvalues['plagiarism_show_student_score'] == PLAGIARISM_TII_SHOW_ALWAYS)) {
 
-            if (($plagiarismvalues['plagiarism_show_student_report'] == PLAGIARSIM_TII_SHOW_CLOSED && $assignclosed) or $plagiarismvalues['plagiarism_show_student_report'] == PLAGIARISM_TII_SHOW_ALWAYS) {
+            if ($plagiarismvalues['plagiarism_show_student_report'] == PLAGIARISM_TII_SHOW_ALWAYS) {
                 $output .= '<span class="plagiarismreport"><a href="'.turnitin_get_report_link($plagiarismfile, $COURSE, $plagiarismsettings).'" target="_blank">'.get_string('similarity', 'plagiarism_turnitin').'</a>';
-                if ($plagiarismvalues['plagiarism_show_student_score'] == PLAGIARISM_TII_SHOW_ALWAYS or ($plagiarismvalues['plagiarism_show_student_score'] == PLAGIARISM_TII_SHOW_CLOSED && $assignclosed)) {
+                if ($plagiarismvalues['plagiarism_show_student_score'] == PLAGIARISM_TII_SHOW_ALWAYS) {
                     $output .= ':<span class="'.$rank.'">'.$plagiarismfile->similarityscore.'%</span>';
                 }
                 $output .= '</span>';
