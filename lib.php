@@ -28,6 +28,10 @@
 if (!defined('MOODLE_INTERNAL')) {
     die('Direct access to this script is forbidden.');    ///  It must be included from a Moodle page
 }
+define('PLAGIARISM_TII_SHOW_NEVER', 0);
+define('PLAGIARISM_TII_SHOW_ALWAYS', 1);
+define('PLAGIARISM_TII_SHOW_CLOSED', 2);
+
 
 //Turnitin fcmd types - return values.
 define('TURNITIN_LOGIN', 1);
@@ -127,12 +131,14 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
                             $output .= '<span class="plagiarismreport">'.get_string('similarity', 'plagiarism_turnitin').':<span class="'.$rank.'">'.$plagiarismfile->similarityscore.'%</span></span>';
                         }
                     } elseif (isset($plagiarismvalues['plagiarism_show_student_report']) && isset($plagiarismvalues['plagiarism_show_student_score']) and //if report and score fields are set.
-                             ($plagiarismvalues['plagiarism_show_student_report']== 1 or $plagiarismvalues['plagiarism_show_student_score'] ==1 or //if show always is set
-                             ($plagiarismvalues['plagiarism_show_student_score']==2 && $assignclosed) or //if student score to be show when assignment closed
-                             ($plagiarismvalues['plagiarism_show_student_report']==2 && $assignclosed))) { //if student report to be shown when assignment closed
-                        if (($plagiarismvalues['plagiarism_show_student_report']==2 && $assignclosed) or $plagiarismvalues['plagiarism_show_student_report']==1) {
+                             ($plagiarismvalues['plagiarism_show_student_report'] == PLAGIARISM_TII_SHOW_ALWAYS or
+                              $plagiarismvalues['plagiarism_show_student_score'] == PLAGIARISM_TII_SHOW_ALWAYS or
+                             ($plagiarismvalues['plagiarism_show_student_score'] == PLAGIARISM_TII_SHOW_CLOSED && $assignclosed) or
+                             ($plagiarismvalues['plagiarism_show_student_report'] == PLAGIARISM_TII_SHOW_CLOSED && $assignclosed))) {
+
+                        if (($plagiarismvalues['plagiarism_show_student_report'] == PLAGIARSIM_TII_SHOW_CLOSED && $assignclosed) or $plagiarismvalues['plagiarism_show_student_report'] == PLAGIARISM_TII_SHOW_ALWAYS) {
                             $output .= '<span class="plagiarismreport"><a href="'.turnitin_get_report_link($plagiarismfile, $COURSE, $plagiarismsettings).'" target="_blank">'.get_string('similarity', 'plagiarism_turnitin').'</a>';
-                            if ($plagiarismvalues['plagiarism_show_student_score']==1 or ($plagiarismvalues['plagiarism_show_student_score']==2 && $assignclosed)) {
+                            if ($plagiarismvalues['plagiarism_show_student_score'] == PLAGIARISM_TII_SHOW_ALWAYS or ($plagiarismvalues['plagiarism_show_student_score'] == PLAGIARISM_TII_SHOW_CLOSED && $assignclosed)) {
                                 $output .= ':<span class="'.$rank.'">'.$plagiarismfile->similarityscore.'%</span>';
                             }
                             $output .= '</span>';
@@ -1245,16 +1251,16 @@ function turnitin_get_responsetime($plagiarismsettings) {
  */
 function turnitin_get_form_elements($mform) {
         $ynoptions = array( 0 => get_string('no'), 1 => get_string('yes'));
-        $tiioptions = array(0 => get_string("never"), 1 => get_string("always"), 2 => get_string("showwhenclosed", "plagiarism_turnitin"));
+        $tiishowoptions = array(PLAGIARISM_TII_SHOW_NEVER => get_string("never"), PLAGIARISM_TII_SHOW_ALWAYS => get_string("always"), PLAGIARISM_TII_SHOW_CLOSED => get_string("showwhenclosed", "plagiarism_turnitin"));
         $tiidraftoptions = array(0 => get_string("submitondraft","plagiarism_turnitin"), 1 => get_string("submitonfinal","plagiarism_turnitin"));
         $reportgenoptions = array( 0 => get_string('reportgenimmediate', 'plagiarism_turnitin'), 1 => get_string('reportgenimmediateoverwrite', 'plagiarism_turnitin'), 2 => get_string('reportgenduedate', 'plagiarism_turnitin'));
         $excludetype = array( 0 => get_string('no'), 1 => get_string('wordcount', 'plagiarism_turnitin'), 2 => get_string('percentage', 'plagiarism_turnitin'));
 
         $mform->addElement('header', 'plagiarismdesc');
         $mform->addElement('select', 'use_turnitin', get_string("useturnitin", "plagiarism_turnitin"), $ynoptions);
-        $mform->addElement('select', 'plagiarism_show_student_score', get_string("showstudentsscore", "plagiarism_turnitin"), $tiioptions);
+        $mform->addElement('select', 'plagiarism_show_student_score', get_string("showstudentsscore", "plagiarism_turnitin"), $tiishowoptions);
         $mform->addHelpButton('plagiarism_show_student_score', 'showstudentsscore', 'plagiarism_turnitin');
-        $mform->addElement('select', 'plagiarism_show_student_report', get_string("showstudentsreport", "plagiarism_turnitin"), $tiioptions);
+        $mform->addElement('select', 'plagiarism_show_student_report', get_string("showstudentsreport", "plagiarism_turnitin"), $tiishowoptions);
         $mform->addHelpButton('plagiarism_show_student_report', 'showstudentsreport', 'plagiarism_turnitin');
         if ($mform->elementExists('var4')) {
             $mform->addElement('select', 'plagiarism_draft_submit', get_string("draftsubmit", "plagiarism_turnitin"), $tiidraftoptions);
