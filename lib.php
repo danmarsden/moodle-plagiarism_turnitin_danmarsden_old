@@ -149,14 +149,6 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
         }
 
         // TII has successfully returned a score.
-        //check for open mod.
-        $assignclosed = false;
-        $time = time();
-        if (!empty($module->preventlate) && !empty($module->timedue)) {
-            $assignclosed = ($module->timeavailable <= $time && $time <= $module->timedue);
-        } elseif (!empty($module->timeavailable)) {
-            $assignclosed = ($module->timeavailable <= $time);
-        }
         $assignclosed = false;
         $rank = plagiarism_get_css_rank($plagiarismfile->similarityscore);
         if ($USER->id <> $userid) { //this is a teacher with plagiarism/turnitin:viewsimilarityscore
