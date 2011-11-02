@@ -114,56 +114,76 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
         $modulecontext = get_context_instance(CONTEXT_MODULE, $cmid);
         $output = '';
 
-        //check if this is a user trying to look at their details, or a teacher with viewsimilarityscore rights.
-        if (($USER->id == $userid) || has_capability('plagiarism/turnitin:viewsimilarityscore', $modulecontext)) {
-            if ($plagiarismsettings = $this->get_settings()) {
-                $plagiarismfile = $DB->get_record_sql(
-                            "SELECT * FROM {turnitin_files}
-                             WHERE cm = ? AND userid = ? AND " .
-                            $DB->sql_compare_text('identifier') . " = ?",
-                            array($cmid, $userid,$linkarray['file']->get_contenthash()));
+        if ($USER->id == $userid) {
+            // The user wants to see details on their own report
+            $selfreport = true;
+        } else {
+            $selfreport = false;
+        }
+        // Whether the user has permissions to see all similarity reports in the context of this module.
+        $viewsimilarityscore = has_capability('plagiarism/turnitin:viewsimilarityscore', $modulecontext);
+        if (!$selfreport && !$viewsimilarityscore) {
+            // The user has no right to see the requested detail.
+            return '<br />';
+        }
 
-                if (isset($plagiarismfile->similarityscore) && $plagiarismfile->statuscode=='success') { //if TII has returned a succesful score.
-                    //check for open mod.
-                    $assignclosed = false;
-                    $time = time();
-                    if (!empty($module->preventlate) && !empty($module->timedue)) {
-                        $assignclosed = ($module->timeavailable <= $time && $time <= $module->timedue);
-                    } elseif (!empty($module->timeavailable)) {
-                        $assignclosed = ($module->timeavailable <= $time);
-                    }
-                    $assignclosed = false;
-                    $rank = plagiarism_get_css_rank($plagiarismfile->similarityscore);
-                    if ($USER->id <> $userid) { //this is a teacher with plagiarism/turnitin:viewsimilarityscore
-                        if (has_capability('plagiarism/turnitin:viewfullreport', $modulecontext)) {
-                            $output .= '<span class="plagiarismreport"><a href="'.turnitin_get_report_link($plagiarismfile, $COURSE, $plagiarismsettings).'" target="_blank">'.get_string('similarity', 'plagiarism_turnitin').':</a><span class="'.$rank.'">'.$plagiarismfile->similarityscore.'%</span></span>';
-                        } else {
-                            $output .= '<span class="plagiarismreport">'.get_string('similarity', 'plagiarism_turnitin').':<span class="'.$rank.'">'.$plagiarismfile->similarityscore.'%</span></span>';
-                        }
-                    } elseif (isset($plagiarismvalues['plagiarism_show_student_report']) && isset($plagiarismvalues['plagiarism_show_student_score']) and //if report and score fields are set.
-                             ($plagiarismvalues['plagiarism_show_student_report'] == PLAGIARISM_TII_SHOW_ALWAYS or
-                              $plagiarismvalues['plagiarism_show_student_score'] == PLAGIARISM_TII_SHOW_ALWAYS or
-                             ($plagiarismvalues['plagiarism_show_student_score'] == PLAGIARISM_TII_SHOW_CLOSED && $assignclosed) or
-                             ($plagiarismvalues['plagiarism_show_student_report'] == PLAGIARISM_TII_SHOW_CLOSED && $assignclosed))) {
+        $plagiarismsettings = $this->get_settings();
+        if (empty($plagiarismsettings)) {
+            // Turnitin is not enabled
+            return '<br />';
+        }
+        $plagiarismfile = $DB->get_record_sql(
+                "SELECT * FROM {turnitin_files}
+                 WHERE cm = ? AND userid = ? AND " .
+                $DB->sql_compare_text('identifier') . " = ?",
+                array($cmid, $userid,$linkarray['file']->get_contenthash()));
+        if (empty($plagiarismfile)) {
+            // No record of that submission - so no links can be returned
+            return '<br />';
+        }
 
-                        if (($plagiarismvalues['plagiarism_show_student_report'] == PLAGIARSIM_TII_SHOW_CLOSED && $assignclosed) or $plagiarismvalues['plagiarism_show_student_report'] == PLAGIARISM_TII_SHOW_ALWAYS) {
-                            $output .= '<span class="plagiarismreport"><a href="'.turnitin_get_report_link($plagiarismfile, $COURSE, $plagiarismsettings).'" target="_blank">'.get_string('similarity', 'plagiarism_turnitin').'</a>';
-                            if ($plagiarismvalues['plagiarism_show_student_score'] == PLAGIARISM_TII_SHOW_ALWAYS or ($plagiarismvalues['plagiarism_show_student_score'] == PLAGIARISM_TII_SHOW_CLOSED && $assignclosed)) {
-                                $output .= ':<span class="'.$rank.'">'.$plagiarismfile->similarityscore.'%</span>';
-                            }
-                            $output .= '</span>';
-                        } else {
-                            $output .= '<span class="plagiarismreport">'.get_string('similarity', 'plagiarism_turnitin').':<span class="'.$rank.'">'.$plagiarismfile->similarityscore.'%</span>';
-                        }
-                    }
-                    //now check if grademark enabled and return the status of this file.
-                    if (!empty($plagiarismsettings['turnitin_enablegrademark'])) {
-                            $output .= '<span class="grademark">'.turnitin_get_grademark_link($plagiarismfile, $COURSE, $module, $plagiarismsettings)."</span>";
-                    }
-                } else if(isset($plagiarismfile->statuscode)) { //always display errors - even if the student isn't able to see report/score.
-                    $output .= turnitin_error_text($plagiarismfile->statuscode);
-                }
+        if(isset($plagiarismfile->statuscode) && $plagiarismfile->statuscode !== 'success') {
+            //always display errors - even if the student isn't able to see report/score.
+            $output .= turnitin_error_text($plagiarismfile->statuscode);
+            return $output . "<br />";
+        }
+
+        // TII has successfully returned a score.
+        //check for open mod.
+        $assignclosed = false;
+        $time = time();
+        if (!empty($module->preventlate) && !empty($module->timedue)) {
+            $assignclosed = ($module->timeavailable <= $time && $time <= $module->timedue);
+        } elseif (!empty($module->timeavailable)) {
+            $assignclosed = ($module->timeavailable <= $time);
+        }
+        $assignclosed = false;
+        $rank = plagiarism_get_css_rank($plagiarismfile->similarityscore);
+        if ($USER->id <> $userid) { //this is a teacher with plagiarism/turnitin:viewsimilarityscore
+            if (has_capability('plagiarism/turnitin:viewfullreport', $modulecontext)) {
+                $output .= '<span class="plagiarismreport"><a href="'.turnitin_get_report_link($plagiarismfile, $COURSE, $plagiarismsettings).'" target="_blank">'.get_string('similarity', 'plagiarism_turnitin').':</a><span class="'.$rank.'">'.$plagiarismfile->similarityscore.'%</span></span>';
+            } else {
+                $output .= '<span class="plagiarismreport">'.get_string('similarity', 'plagiarism_turnitin').':<span class="'.$rank.'">'.$plagiarismfile->similarityscore.'%</span></span>';
             }
+        } elseif (isset($plagiarismvalues['plagiarism_show_student_report']) && isset($plagiarismvalues['plagiarism_show_student_score']) and //if report and score fields are set.
+                 ($plagiarismvalues['plagiarism_show_student_report'] == PLAGIARISM_TII_SHOW_ALWAYS or
+                  $plagiarismvalues['plagiarism_show_student_score'] == PLAGIARISM_TII_SHOW_ALWAYS or
+                 ($plagiarismvalues['plagiarism_show_student_score'] == PLAGIARISM_TII_SHOW_CLOSED && $assignclosed) or
+                 ($plagiarismvalues['plagiarism_show_student_report'] == PLAGIARISM_TII_SHOW_CLOSED && $assignclosed))) {
+
+            if (($plagiarismvalues['plagiarism_show_student_report'] == PLAGIARSIM_TII_SHOW_CLOSED && $assignclosed) or $plagiarismvalues['plagiarism_show_student_report'] == PLAGIARISM_TII_SHOW_ALWAYS) {
+                $output .= '<span class="plagiarismreport"><a href="'.turnitin_get_report_link($plagiarismfile, $COURSE, $plagiarismsettings).'" target="_blank">'.get_string('similarity', 'plagiarism_turnitin').'</a>';
+                if ($plagiarismvalues['plagiarism_show_student_score'] == PLAGIARISM_TII_SHOW_ALWAYS or ($plagiarismvalues['plagiarism_show_student_score'] == PLAGIARISM_TII_SHOW_CLOSED && $assignclosed)) {
+                    $output .= ':<span class="'.$rank.'">'.$plagiarismfile->similarityscore.'%</span>';
+                }
+                $output .= '</span>';
+            } else {
+                $output .= '<span class="plagiarismreport">'.get_string('similarity', 'plagiarism_turnitin').':<span class="'.$rank.'">'.$plagiarismfile->similarityscore.'%</span>';
+            }
+        }
+        //now check if grademark enabled and return the status of this file.
+        if (!empty($plagiarismsettings['turnitin_enablegrademark'])) {
+                $output .= '<span class="grademark">'.turnitin_get_grademark_link($plagiarismfile, $COURSE, $module, $plagiarismsettings)."</span>";
         }
         return $output.'<br/>';
     }
