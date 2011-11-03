@@ -84,46 +84,81 @@ require_once($CFG->dirroot.'/plagiarism/lib.php');
 ///// Turnitin Class ////////////////////////////////////////////////////
 class plagiarism_plugin_turnitin extends plagiarism_plugin {
     public function get_links($linkarray) {
-        global $DB, $USER, $COURSE;
+        global $DB, $USER, $COURSE, $CFG;
         $cmid = $linkarray['cmid'];
         $userid = $linkarray['userid'];
-        //$userid, $file, $cmid, $course, $module
-        //TODO: the following check is hardcoded to the Assignment module - needs updating to be generic.
-        if (isset($linkarray['assignment'])) {
-            $module = $linkarray['assignment'];
-        } else {
-            $modulesql = 'SELECT m.id, m.name, cm.instance'.
-                    ' FROM {course_modules} cm' .
-                    ' INNER JOIN {modules} m on cm.module = m.id ' .
-                    'WHERE cm.id = ?';
-            $moduledetail = $DB->get_record_sql($modulesql, array($cmid));
-            if (!empty($moduledetail)) {
-                $sql = "SELECT * FROM {?} WHERE id= ?";
-                $module = $DB->get_record_sql($sql, array($moduledetail->name, $moduledetail->instance));
-            }
-        }
-        if (empty($module)) {
-            return '';
+        $file = $linkarray['file'];
+        $results = $this->get_file_results($cmid, $userid, $file);
+        if (empty($results)) {
+            return '<br />';
         }
 
+        if (array_key_exists('error', $results)) {
+            return $results['error'];
+        }
+
+        // TII has successfully returned a score.
+        $rank = plagiarism_get_css_rank($results['score']);
+
+        $similaritystring = '<span class="' . $rank . '">' . $results['score'] . '%</span>';
+        if (!empty($results['reporturl'])) {
+            // User gets to see link to similarity report & similarity score
+            $output = '<span class="plagiarismreport"><a href="' . $results['reporturl'] . '" target="_blank">';
+            $output .= get_string('similarity', 'plagiarism_turnitin').':</a>' . $similaritystring . '</span>';
+        } else {
+            // User only sees similarity score
+            $output = '<span class="plagiarismreport">' . get_string('similarity', 'plagiarism_turnitin') . $similaritystring . '</span>';
+        }
+
+        //now check if grademark enabled and return the status of this file.
+        if (!empty($results['grademarklink'])) {
+            $output .= '<span class="grademark">' . $results['grademarklink'] . "</span>";
+        }
+        return $output.'<br/>';
+    }
+
+    /**
+    * Get the information turnitin has about a file
+    * @param int $cmid the id of the coursemodule file was submitted for
+    * @param int $userid the id of the user who submitted the file
+    * @param object $file file object describing a moodle file which was submited to TII
+    * @return mixed - false if no info available, or an array describing what's known about the TII submission
+    */
+    public function get_file_results($cmid, $userid, $file) {
+        global $DB, $USER, $COURSE, $CFG;
+
+        $filehash = $file->get_contenthash();
+        $modulesql = 'SELECT m.id, m.name, cm.instance'.
+                ' FROM {course_modules} cm' .
+                ' INNER JOIN {modules} m on cm.module = m.id ' .
+                'WHERE cm.id = ?';
+        $moduledetail = $DB->get_record_sql($modulesql, array($cmid));
+        if (!empty($moduledetail)) {
+            $sql = "SELECT * FROM " . $CFG->prefix . $moduledetail->name . " WHERE id= ?";
+            $module = $DB->get_record_sql($sql, array($moduledetail->instance));
+        }
+        if (empty($module)) {
+            // No such cmid
+            return false;
+        }
+
+        $plagiarismsettings = $this->get_settings();
+        if (empty($plagiarismsettings)) {
+            // Turnitin is not enabled
+            return false;;
+        }
         $plagiarismvalues = $DB->get_records_menu('turnitin_config', array('cm'=>$cmid),'','name,value');
         if (empty($plagiarismvalues['use_turnitin'])) {
-            //nothing to do here... move along!
-           return '';
+           // Turnitin not in use for this cm
+           return false;
         }
         $modulecontext = get_context_instance(CONTEXT_MODULE, $cmid);
 
-        if ($USER->id == $userid) {
-            // The user wants to see details on their own report
-            $selfreport = true;
-        } else {
-            $selfreport = false;
-        }
         // Whether the user has permissions to see all items in the context of this module.
         $viewsimilarityscore = has_capability('plagiarism/turnitin:viewsimilarityscore', $modulecontext);
         $viewfullreport = has_capability('plagiarism/turnitin:viewfullreport', $modulecontext);
-
-        if ($selfreport) {
+        if ($USER->id == $userid) {
+            // The user wants to see details on their own report
             if ($plagiarismvalues['plagiarism_show_student_score'] == PLAGIARISM_TII_SHOW_ALWAYS) {
                 $viewsimilarityscore = true;
             }
@@ -131,52 +166,37 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
                 $viewfullreport = true;
             }
         }
+
         if (!$viewsimilarityscore && !$viewfullreport) {
             // The user has no right to see the requested detail.
-            return '<br />';
+            return false;
         }
 
-        $plagiarismsettings = $this->get_settings();
-        if (empty($plagiarismsettings)) {
-            // Turnitin is not enabled
-            return '<br />';
-        }
-        $plagiarismfile = $DB->get_record_sql(
-                "SELECT * FROM {turnitin_files}
-                 WHERE cm = ? AND userid = ? AND " .
-                $DB->sql_compare_text('identifier') . " = ?",
-                array($cmid, $userid,$linkarray['file']->get_contenthash()));
+        $plagiarismfile = $DB->get_record_sql("SELECT * FROM {turnitin_files} WHERE cm = ?" .
+                " AND userid = ? AND " . $DB->sql_compare_text('identifier') . " = ?",
+                array($cmid, $userid,$filehash));
         if (empty($plagiarismfile)) {
             // No record of that submission - so no links can be returned
-            return '<br />';
+            return false;
         }
-
-        if(isset($plagiarismfile->statuscode) && $plagiarismfile->statuscode !== 'success') {
+        $results = array();
+        if(isset($plagiarismfile->statuscode) && $plagiarismfile->statuscode != 'success') {
             //always display errors - even if the student isn't able to see report/score.
-            $output = turnitin_error_text($plagiarismfile->statuscode);
-            return $output . "<br />";
+            $results['error'] = turnitin_error_text($plagiarismfile->statuscode);
+            return $results;
         }
 
-        // TII has successfully returned a score.
-        $rank = plagiarism_get_css_rank($plagiarismfile->similarityscore);
-
-        $similaritystring = '<span class="' . $rank . '">' . $plagiarismfile->similarityscore . '%</span>';
+        // All non-standard situations handled.
+        $results['score'] = $plagiarismfile->similarityscore;
         if ($viewfullreport) {
-            // User gets to see link to similarity report & similarity score
-            $output = '<span class="plagiarismreport"><a href="'.turnitin_get_report_link($plagiarismfile, $COURSE, $plagiarismsettings).'" target="_blank">';
-            $output .= get_string('similarity', 'plagiarism_turnitin').':</a>' . $similaritystring . '</span>';
-        } elseif ($viewsimilarityscore) {
-            // User only sees similarity score
-            $output = '<span class="plagiarismreport">' . get_string('similarity', 'plagiarism_turnitin') . $similaritystring . '</span>';
-        } else {
-            $output = '';
+            // User gets to see link to similarity report
+            $results['reporturl'] = turnitin_get_report_link($plagiarismfile, $COURSE, $plagiarismsettings);
         }
 
-        //now check if grademark enabled and return the status of this file.
         if (!empty($plagiarismsettings['turnitin_enablegrademark'])) {
-                $output .= '<span class="grademark">'.turnitin_get_grademark_link($plagiarismfile, $COURSE, $module, $plagiarismsettings)."</span>";
+            $results['grademarklink'] = turnitin_get_grademark_link($plagiarismfile, $COURSE, $module, $plagiarismsettings);
         }
-        return $output.'<br/>';
+        return $results;
     }
 
     public function save_form_elements($data) {
