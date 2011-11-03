@@ -127,6 +127,17 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
     public function get_file_results($cmid, $userid, $file) {
         global $DB, $USER, $COURSE, $CFG;
 
+        $plagiarismsettings = $this->get_settings();
+        if (empty($plagiarismsettings)) {
+            // Turnitin is not enabled
+            return false;
+        }
+        $plagiarismvalues = $DB->get_records_menu('turnitin_config', array('cm'=>$cmid),'','name,value');
+        if (empty($plagiarismvalues['use_turnitin'])) {
+           // Turnitin not in use for this cm
+           return false;
+        }
+
         $filehash = $file->get_contenthash();
         $modulesql = 'SELECT m.id, m.name, cm.instance'.
                 ' FROM {course_modules} cm' .
@@ -142,16 +153,6 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
             return false;
         }
 
-        $plagiarismsettings = $this->get_settings();
-        if (empty($plagiarismsettings)) {
-            // Turnitin is not enabled
-            return false;;
-        }
-        $plagiarismvalues = $DB->get_records_menu('turnitin_config', array('cm'=>$cmid),'','name,value');
-        if (empty($plagiarismvalues['use_turnitin'])) {
-           // Turnitin not in use for this cm
-           return false;
-        }
         $modulecontext = get_context_instance(CONTEXT_MODULE, $cmid);
 
         // Whether the user has permissions to see all items in the context of this module.
