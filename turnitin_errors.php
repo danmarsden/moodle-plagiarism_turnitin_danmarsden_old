@@ -47,7 +47,7 @@ $currenttab='turnitinerrors';
 require_once('turnitin_tabs.php');
 
 echo $OUTPUT->box(get_string('tiiexplainerrors','plagiarism_turnitin'));
-$sqlallfiles = "SELECT t.*, u.firstname, u.lastname, u.id as userid, m.name as moduletype, ".
+$sqlallfiles = "SELECT t.*, u.firstname, u.lastname, m.name as moduletype, ".
                "cm.course as courseid, cm.instance as cminstance FROM ".
                "{turnitin_files} t, {user} u, {modules} m, {course_modules} cm ".
                "WHERE m.id=cm.module AND cm.id=t.cm AND t.userid=u.id ".
