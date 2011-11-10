@@ -423,10 +423,8 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
             $items = $DB->get_records_sql($sql, $params);
             foreach ($items as $item) {
                 $fs = get_file_storage();
-                echo  'identifier: '.$item->identifier."\n";
-                $file = $DB->get_record('files', array('pathnamehash' => $item->identifier));
+                $file = $fs->get_file_by_hash($item->identifier);
                 if ($file) {
-                    $file = $fs->get_file_instance($file);
                     $pid = plagiarism_update_record($item->cm, $item->userid, $file->get_pathnamehash(), $item->attempt+1);
                     if (!empty($pid)) {
                         turnitin_send_file($pid, $plagiarismsettings, $file);
@@ -1477,3 +1475,5 @@ function turnitin_event_mod_deleted($eventdata) {
     $turnitin = new plagiarism_plugin_turnitin();
     return $turnitin->event_handler($eventdata);
 }
+
+
