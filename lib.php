@@ -138,7 +138,7 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
            return false;
         }
 
-        $filehash = $file->get_contenthash();
+        $filehash = $file->get_pathnamehash();
         $modulesql = 'SELECT m.id, m.name, cm.instance'.
                 ' FROM {course_modules} cm' .
                 ' INNER JOIN {modules} m on cm.module = m.id ' .
@@ -423,10 +423,11 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
             $items = $DB->get_records_sql($sql, $params);
             foreach ($items as $item) {
                 $fs = get_file_storage();
-                $file = $DB->get_record('files', array('contenthash' => $item->identifier));
+                echo  'identifier: '.$item->identifier."\n";
+                $file = $DB->get_record('files', array('pathnamehash' => $item->identifier));
                 if ($file) {
                     $file = $fs->get_file_instance($file);
-                    $pid = plagiarism_update_record($item->cm, $item->userid, $file->get_contenthash(), $item->attempt+1);
+                    $pid = plagiarism_update_record($item->cm, $item->userid, $file->get_pathnamehash(), $item->attempt+1);
                     if (!empty($pid)) {
                         turnitin_send_file($pid, $plagiarismsettings, $file);
                     }
@@ -477,7 +478,7 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
                     }
                     if (empty($plagiarismvalues['plagiarism_draft_submit'])) { //check if this is an advanced assignment and shouldn't send the file yet.
                         //TODO - check if this particular file has already been submitted.
-                        $pid = plagiarism_update_record($cmid, $eventdata->userid, $efile->get_contenthash());
+                        $pid = plagiarism_update_record($cmid, $eventdata->userid, $efile->get_pathnamehash());
                         if (!empty($pid)) {
                             $result = turnitin_send_file($pid, $plagiarismsettings, $efile);
                         }
@@ -499,7 +500,7 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
                                 continue;
                             }
                             //TODO: need to check if this file has already been sent! - possible that the file was sent before draft submit was set.
-                            $pid = plagiarism_update_record($cmid, $eventdata->userid, $file->get_contenthash());
+                            $pid = plagiarism_update_record($cmid, $eventdata->userid, $file->get_pathnamehash());
                             if (!empty($pid)) {
                                 $result = turnitin_send_file($pid, $plagiarismsettings, $file);
                             }

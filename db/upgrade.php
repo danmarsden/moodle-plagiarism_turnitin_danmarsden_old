@@ -79,5 +79,62 @@ function xmldb_plagiarism_turnitin_upgrade($oldversion) {
             $DB->insert_record('user_info_field', $newfield);
         }
     }
+
+    // Switch all file identifiers to use pathnamehash, not contenthash (which is not unique)
+    if ($oldversion < 2011111000) {
+
+        $turnitinfiles = $DB->get_records('turnitin_files');
+        $fs = get_file_storage();
+
+        $courseworkid = $DB->get_field('modules', 'id', array('name' => 'coursework'));
+        $assignmentid = $DB->get_field('modules', 'id', array('name' => 'assignment'));
+
+        foreach ($turnitinfiles as &$turnitinfile) {
+            $coursemodule = $DB->get_record('course_modules', array('id' => $turnitinfile->cm));
+            if (!$coursemodule) {
+                $DB->delete_records('turnitin_files', array('id' => $turnitinfile->id));
+                continue;
+            }
+            $modulecontext = get_context_instance(CONTEXT_MODULE, $coursemodule->id);
+            if (!$modulecontext) {
+                $DB->delete_records('turnitin_files', array('id' => $turnitinfile->id));
+                continue;
+            }
+            if ($coursemodule->module == $assignmentid) {
+                $submission = $DB->get_record('assignment_submissions',
+                                              array('assignment' => $coursemodule->instance,
+                                                    'userid' => $turnitinfile->userid));
+                if (!$submission) {
+                    $DB->delete_records('turnitin_files', array('id' => $turnitinfile->id));
+                    continue;
+                }
+                $files = $fs->get_area_files($modulecontext->id, 'mod_assignment',
+                                             'submission', $submission->id);
+            } else if ($coursemodule->module == $courseworkid) {
+                $submission = $DB->get_record('coursework_submissions',
+                                              array('courseworkid' => $coursemodule->instance,
+                                                    'userid' => $turnitinfile->userid));
+                if (!$submission) {
+                    $DB->delete_records('turnitin_files', array('id' => $turnitinfile->id));
+                    continue;
+                }
+                $files = $fs->get_area_files($modulecontext->id, 'mod_coursework',
+                                             'submission', $submission->id);
+            }
+            if ($files) {
+                foreach ($files as $file) {
+                    if ($file->get_contenthash() == $turnitinfile->identifier) {
+                        $turnitinfile->identifier = $file->get_pathnamehash();
+                        $DB->update_record('turnitin_files', $turnitinfile);
+                        echo "Updated turnitin file id {$turnitinfile->id}. Old identifier: ".$file->get_contenthash().", new identifier ".$file->get_pathnamehash()."<br />";
+                    }
+                }
+            }
+        }
+        upgrade_plugin_savepoint(true, 2011111000, 'plagiarism', 'turnitin');
+
+    }
+
+
     return true;
 }

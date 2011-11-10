@@ -80,7 +80,7 @@
             if ($plagiarismsettings) { //get tii settings.
                 $tii = array();
                 $tii['utp']   = TURNITIN_INSTRUCTOR;
-                $tii['fcmd']  = TURNITIN_RETURN_XML; 
+                $tii['fcmd']  = TURNITIN_RETURN_XML;
                 $tii['fid']   = TURNITIN_CREATE_USER;
                 $tii = turnitin_get_tii_user($tii, $USER);
                 $tiixml = plagiarism_get_xml(turnitin_get_url($tii, $plagiarismsettings));
@@ -135,14 +135,14 @@
                                                               'instance'=>$tf->instance));
                 if (!empty($cm)) {
                     $newf->cm = $cm->id;
-                    //now get the contenthash for this old file
+                    //now get the pathnamehash for this old file
                     //first get all the files from the assignment module.
                     $modulecontext = get_context_instance(CONTEXT_MODULE, $cm->id);
                     $submission = $DB->get_record('assignment_submissions', array('assignment'=>$this->instance, 'userid'=>$tf->userid));
                     $files = $fs->get_area_files($modulecontext, 'mod_assignment', 'submission', $submission->id);
                     foreach ($files as $file) {
                         if ($file->get_filename()==$tf->filename) {
-                            $newf->identifier = $file->get_contenthash();
+                            $newf->identifier = $file->get_pathnamehash();
                         }
                     }
                     if (!empty($newf->identifier)) {
