@@ -963,9 +963,11 @@ function turnitin_get_scores($plagiarismsettings) {
             $coursemodule = $DB->get_record('course_modules', array('id'=>$file->cm));
             if ($coursemodule) {
                 $course = $DB->get_record('course', array('id'=>$coursemodule->course));
+            } else {
+                $course = false;
             }
             if (!($user && $course && $coursemodule)) {
-                $DB->delete_record('turnitin_files', $file);
+                $DB->delete_records('turnitin_files', array('id' => $file->id));
                 continue;
             }
 
