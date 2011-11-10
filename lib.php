@@ -1024,23 +1024,24 @@ function turnitin_get_scores($plagiarismsettings) {
  * @param boolean $notify if true, returns a notify call - otherwise just returns the text of the error.
  */
 function turnitin_error_text($statuscode, $notify=true) {
-   $return = '';
-   $statuscode = (int) $statuscode;
-   if (!empty($statuscode)) {
-       if ($statuscode < 100) { //don't return an error state for codes 0-99
-          return '';
-       } else if (($statuscode > 1006 && $statuscode < 1014) or ($statuscode > 1022 && $statuscode < 1025) or $statuscode == 1020) { //these are general errors that a could be useful to students.
-           $return = get_string('tiierror'.$statuscode, 'plagiarism_turnitin');
-       } else if ($statuscode > 1024 && $statuscode < 2000) { //don't have documentation on the other 1000 series errors, so just display a general one.
-           $return = get_string('tiierrorpaperfail', 'plagiarism_turnitin').':'.$statuscode;
-       } else if ($statuscode < 1025 || $statuscode > 2000) { //these are not errors that a student can make any sense out of.
-           $return = get_string('tiiconfigerror', 'plagiarism_turnitin').'('.$statuscode.')';
-       }
-       if (!empty($return) && $notify) {
-           $return = notify($return, 'notifyproblem', 'left', true);
-       }
-   }
-   return $return;
+    global $OUTPUT;
+    $return = '';
+    $statuscode = (int) $statuscode;
+    if (!empty($statuscode)) {
+        if ($statuscode < 100) { //don't return an error state for codes 0-99
+            return '';
+        } else if (($statuscode > 1006 && $statuscode < 1014) or ($statuscode > 1022 && $statuscode < 1025) or $statuscode == 1020) { //these are general errors that a could be useful to students.
+            $return = get_string('tiierror'.$statuscode, 'plagiarism_turnitin');
+        } else if ($statuscode > 1024 && $statuscode < 2000) { //don't have documentation on the other 1000 series errors, so just display a general one.
+            $return = get_string('tiierrorpaperfail', 'plagiarism_turnitin').':'.$statuscode;
+        } else if ($statuscode < 1025 || $statuscode > 2000) { //these are not errors that a student can make any sense out of.
+            $return = get_string('tiiconfigerror', 'plagiarism_turnitin').'('.$statuscode.')';
+        }
+        if (!empty($return) && $notify) {
+            $return = $OUTPUT->notification($return, 'notifyproblem');
+        }
+    }
+    return $return;
 }
 
 /**
