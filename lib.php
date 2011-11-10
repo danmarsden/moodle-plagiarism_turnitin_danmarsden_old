@@ -422,30 +422,17 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
                     tf.statuscode $usql AND tf.attempt < ".$plagiarismsettings['turnitin_attempts'];
             $items = $DB->get_records_sql($sql, $params);
             foreach ($items as $item) {
-                    $foundfile = false;
-                    //TODO: hardcoded to assignment here - need to check for correct file location.
-                    $assignmentbase = new assignment_base($item->cm);
-                    $modulecontext = get_context_instance(CONTEXT_MODULE, $item->cm);
-                    $fs = get_file_storage();
-                    //TODO: check to see if there's a more efficient way to select just one file based on the id instead of iterating through all files to find it.
-                    $submission = $assignmentbase->get_submission($item->userid);
-                    if ($files = $fs->get_area_files($modulecontext->id, 'mod_assignment', 'submission',$submission->id)) {
-                        foreach ($files as $file) {
-                            if ($file->get_filename()==='.') {
-                                continue;
-                            }
-                            if ($file->get_contenthash() == $item->identifier) {
-                                $foundfile = true;
-                                $pid = plagiarism_update_record($item->cm, $item->userid, $file->get_contenthash(), $item->attempt+1);
-                                if (!empty($pid)) {
-                                    turnitin_send_file($pid, $plagiarismsettings, $file);
-                                }
-                            }
-                        }
+                $fs = get_file_storage();
+                $file = $DB->get_record('files', array('contenthash' => $item->identifier));
+                if ($file) {
+                    $file = $fs->get_file_instance($file);
+                    $pid = plagiarism_update_record($item->cm, $item->userid, $file->get_contenthash(), $item->attempt+1);
+                    if (!empty($pid)) {
+                        turnitin_send_file($pid, $plagiarismsettings, $file);
                     }
-                    if (!$foundfile) {
-                        debugging('file resubmit attempted but file not found id:'.$item->id, DEBUG_DEVELOPER);
-                    }
+                } else {
+                    debugging('file resubmit attempted but file not found id:'.$item->id, DEBUG_DEVELOPER);
+                }
             }
         }
     }
