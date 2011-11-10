@@ -656,7 +656,7 @@ function turnitin_get_url($tii, $plagiarismsettings, $returnArray=false, $pid=''
     $tii['gmtime']  = turnitin_get_gmtime();
     $tii['aid']     = $plagiarismsettings['turnitin_accountid'];
     $tii['version'] = rawurlencode($CFG->release); //only used internally by TII.
-    $tii['src'] = '14'; //Magic number that identifies this Integration to Turnitin 
+    $tii['src'] = '14'; //Magic number that identifies this Integration to Turnitin
     //prepare $tii for md5string - need to urldecode before generating the md5.
     $tiimd5 = array();
     foreach($tii as $key => $value) {
@@ -960,8 +960,17 @@ function turnitin_get_scores($plagiarismsettings) {
         foreach($files as $file) {
             //set globals.
             $user = $DB->get_record('user', array('id'=>$file->userid));
+            if (!$user) {
+                continue;
+            }
             $coursemodule = $DB->get_record('course_modules', array('id'=>$file->cm));
+            if (!$coursemodule) {
+                continue;
+            }
             $course = $DB->get_record('course', array('id'=>$coursemodule->course));
+            if (!$course) {
+                continue;
+            }
             $mainteacher = $DB->get_field('turnitin_config', 'value', array('cm'=>$file->cm, 'name'=>'turnitin_mainteacher'));
             if (!empty($mainteacher)) {
                 $tii['utp']      = TURNITIN_INSTRUCTOR;
@@ -1088,8 +1097,8 @@ function turnitin_update_assignment($plagiarismsettings, $plagiarismvalues, $eve
             $tii['fcmd'] = TURNITIN_RETURN_XML;
             $tii['fid']  = TURNITIN_CREATE_CLASS; // create class under the given account and assign above user as instructor (fid=2)
             $tiixml = plagiarism_get_xml(turnitin_get_url($tii, $plagiarismsettings));
-            if (!empty($tiixml->rcode[0]) && ($tiixml->rcode[0] == TURNITIN_RESP_CLASS_CREATED_LOGIN or 
-                                              $tiixml->rcode[0] == TURNITIN_RESP_CLASS_CREATED or 
+            if (!empty($tiixml->rcode[0]) && ($tiixml->rcode[0] == TURNITIN_RESP_CLASS_CREATED_LOGIN or
+                                              $tiixml->rcode[0] == TURNITIN_RESP_CLASS_CREATED or
                                               $tiixml->rcode[0] == TURNITIN_RESP_CLASS_UPDATED)) {
                 //save external courseid for future reference.
                 if (!empty($tiixml->classid[0])) {
