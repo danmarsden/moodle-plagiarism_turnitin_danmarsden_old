@@ -959,16 +959,21 @@ function turnitin_get_scores($plagiarismsettings) {
     if (!empty($files)) {
         foreach($files as $file) {
             //set globals.
+            $valid = true;
             $user = $DB->get_record('user', array('id'=>$file->userid));
             if (!$user) {
-                continue;
+                $valid = false;
             }
             $coursemodule = $DB->get_record('course_modules', array('id'=>$file->cm));
             if (!$coursemodule) {
-                continue;
+                $valid = false;
             }
             $course = $DB->get_record('course', array('id'=>$coursemodule->course));
             if (!$course) {
+                $valid = false;
+            }
+            if (!$valid) {
+                $DB->delete_record('turnitin_files', $file);
                 continue;
             }
             $mainteacher = $DB->get_field('turnitin_config', 'value', array('cm'=>$file->cm, 'name'=>'turnitin_mainteacher'));
