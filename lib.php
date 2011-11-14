@@ -138,7 +138,7 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
            return false;
         }
 
-        $filehash = $file->get_contenthash();
+        $filehash = $file->get_pathnamehash();
         $modulesql = 'SELECT m.id, m.name, cm.instance'.
                 ' FROM {course_modules} cm' .
                 ' INNER JOIN {modules} m on cm.module = m.id ' .
@@ -422,30 +422,16 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
                     tf.statuscode $usql AND tf.attempt < ".$plagiarismsettings['turnitin_attempts'];
             $items = $DB->get_records_sql($sql, $params);
             foreach ($items as $item) {
-                    $foundfile = false;
-                    //TODO: hardcoded to assignment here - need to check for correct file location.
-                    $assignmentbase = new assignment_base($item->cm);
-                    $modulecontext = get_context_instance(CONTEXT_MODULE, $item->cm);
-                    $fs = get_file_storage();
-                    //TODO: check to see if there's a more efficient way to select just one file based on the id instead of iterating through all files to find it.
-                    $submission = $assignmentbase->get_submission($item->userid);
-                    if ($files = $fs->get_area_files($modulecontext->id, 'mod_assignment', 'submission',$submission->id)) {
-                        foreach ($files as $file) {
-                            if ($file->get_filename()==='.') {
-                                continue;
-                            }
-                            if ($file->get_contenthash() == $item->identifier) {
-                                $foundfile = true;
-                                $pid = plagiarism_update_record($item->cm, $item->userid, $file->get_contenthash(), $item->attempt+1);
-                                if (!empty($pid)) {
-                                    turnitin_send_file($pid, $plagiarismsettings, $file);
-                                }
-                            }
-                        }
+                $fs = get_file_storage();
+                $file = $fs->get_file_by_hash($item->identifier);
+                if ($file) {
+                    $pid = plagiarism_update_record($item->cm, $item->userid, $file->get_pathnamehash(), $item->attempt+1);
+                    if (!empty($pid)) {
+                        turnitin_send_file($pid, $plagiarismsettings, $file);
                     }
-                    if (!$foundfile) {
-                        debugging('file resubmit attempted but file not found id:'.$item->id, DEBUG_DEVELOPER);
-                    }
+                } else {
+                    debugging('file resubmit attempted but file not found id:'.$item->id, DEBUG_DEVELOPER);
+                }
             }
         }
     }
@@ -490,7 +476,7 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
                     }
                     if (empty($plagiarismvalues['plagiarism_draft_submit'])) { //check if this is an advanced assignment and shouldn't send the file yet.
                         //TODO - check if this particular file has already been submitted.
-                        $pid = plagiarism_update_record($cmid, $eventdata->userid, $efile->get_contenthash());
+                        $pid = plagiarism_update_record($cmid, $eventdata->userid, $efile->get_pathnamehash());
                         if (!empty($pid)) {
                             $result = turnitin_send_file($pid, $plagiarismsettings, $efile);
                         }
@@ -512,7 +498,7 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
                                 continue;
                             }
                             //TODO: need to check if this file has already been sent! - possible that the file was sent before draft submit was set.
-                            $pid = plagiarism_update_record($cmid, $eventdata->userid, $file->get_contenthash());
+                            $pid = plagiarism_update_record($cmid, $eventdata->userid, $file->get_pathnamehash());
                             if (!empty($pid)) {
                                 $result = turnitin_send_file($pid, $plagiarismsettings, $file);
                             }
@@ -656,7 +642,7 @@ function turnitin_get_url($tii, $plagiarismsettings, $returnArray=false, $pid=''
     $tii['gmtime']  = turnitin_get_gmtime();
     $tii['aid']     = $plagiarismsettings['turnitin_accountid'];
     $tii['version'] = rawurlencode($CFG->release); //only used internally by TII.
-    $tii['src'] = '14'; //Magic number that identifies this Integration to Turnitin 
+    $tii['src'] = '14'; //Magic number that identifies this Integration to Turnitin
     //prepare $tii for md5string - need to urldecode before generating the md5.
     $tiimd5 = array();
     foreach($tii as $key => $value) {
@@ -961,7 +947,16 @@ function turnitin_get_scores($plagiarismsettings) {
             //set globals.
             $user = $DB->get_record('user', array('id'=>$file->userid));
             $coursemodule = $DB->get_record('course_modules', array('id'=>$file->cm));
-            $course = $DB->get_record('course', array('id'=>$coursemodule->course));
+            if ($coursemodule) {
+                $course = $DB->get_record('course', array('id'=>$coursemodule->course));
+            } else {
+                $course = false;
+            }
+            if (!($user && $course && $coursemodule)) {
+                $DB->delete_records('turnitin_files', array('id' => $file->id));
+                continue;
+            }
+
             $mainteacher = $DB->get_field('turnitin_config', 'value', array('cm'=>$file->cm, 'name'=>'turnitin_mainteacher'));
             if (!empty($mainteacher)) {
                 $tii['utp']      = TURNITIN_INSTRUCTOR;
@@ -1015,23 +1010,24 @@ function turnitin_get_scores($plagiarismsettings) {
  * @param boolean $notify if true, returns a notify call - otherwise just returns the text of the error.
  */
 function turnitin_error_text($statuscode, $notify=true) {
-   $return = '';
-   $statuscode = (int) $statuscode;
-   if (!empty($statuscode)) {
-       if ($statuscode < 100) { //don't return an error state for codes 0-99
-          return '';
-       } else if (($statuscode > 1006 && $statuscode < 1014) or ($statuscode > 1022 && $statuscode < 1025) or $statuscode == 1020) { //these are general errors that a could be useful to students.
-           $return = get_string('tiierror'.$statuscode, 'plagiarism_turnitin');
-       } else if ($statuscode > 1024 && $statuscode < 2000) { //don't have documentation on the other 1000 series errors, so just display a general one.
-           $return = get_string('tiierrorpaperfail', 'plagiarism_turnitin').':'.$statuscode;
-       } else if ($statuscode < 1025 || $statuscode > 2000) { //these are not errors that a student can make any sense out of.
-           $return = get_string('tiiconfigerror', 'plagiarism_turnitin').'('.$statuscode.')';
-       }
-       if (!empty($return) && $notify) {
-           $return = notify($return, 'notifyproblem', 'left', true);
-       }
-   }
-   return $return;
+    global $OUTPUT;
+    $return = '';
+    $statuscode = (int) $statuscode;
+    if (!empty($statuscode)) {
+        if ($statuscode < 100) { //don't return an error state for codes 0-99
+            return '';
+        } else if (($statuscode > 1006 && $statuscode < 1014) or ($statuscode > 1022 && $statuscode < 1025) or $statuscode == 1020) { //these are general errors that a could be useful to students.
+            $return = get_string('tiierror'.$statuscode, 'plagiarism_turnitin');
+        } else if ($statuscode > 1024 && $statuscode < 2000) { //don't have documentation on the other 1000 series errors, so just display a general one.
+            $return = get_string('tiierrorpaperfail', 'plagiarism_turnitin').':'.$statuscode;
+        } else if ($statuscode < 1025 || $statuscode > 2000) { //these are not errors that a student can make any sense out of.
+            $return = get_string('tiiconfigerror', 'plagiarism_turnitin').'('.$statuscode.')';
+        }
+        if (!empty($return) && $notify) {
+            $return = $OUTPUT->notification($return, 'notifyproblem');
+        }
+    }
+    return $return;
 }
 
 /**
@@ -1088,8 +1084,8 @@ function turnitin_update_assignment($plagiarismsettings, $plagiarismvalues, $eve
             $tii['fcmd'] = TURNITIN_RETURN_XML;
             $tii['fid']  = TURNITIN_CREATE_CLASS; // create class under the given account and assign above user as instructor (fid=2)
             $tiixml = plagiarism_get_xml(turnitin_get_url($tii, $plagiarismsettings));
-            if (!empty($tiixml->rcode[0]) && ($tiixml->rcode[0] == TURNITIN_RESP_CLASS_CREATED_LOGIN or 
-                                              $tiixml->rcode[0] == TURNITIN_RESP_CLASS_CREATED or 
+            if (!empty($tiixml->rcode[0]) && ($tiixml->rcode[0] == TURNITIN_RESP_CLASS_CREATED_LOGIN or
+                                              $tiixml->rcode[0] == TURNITIN_RESP_CLASS_CREATED or
                                               $tiixml->rcode[0] == TURNITIN_RESP_CLASS_UPDATED)) {
                 //save external courseid for future reference.
                 if (!empty($tiixml->classid[0])) {
@@ -1479,3 +1475,5 @@ function turnitin_event_mod_deleted($eventdata) {
     $turnitin = new plagiarism_plugin_turnitin();
     return $turnitin->event_handler($eventdata);
 }
+
+

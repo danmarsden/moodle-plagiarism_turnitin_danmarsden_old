@@ -79,7 +79,7 @@ if ($resetuser==1 && $id) {
              notify("could not find any files for this submission");
          }
     } else {
-        notify("resubmit function for ".$tfile->moduletype. " not complete yet"); 
+        notify("resubmit function for ".$tfile->moduletype. " not complete yet");
     }
     //TODO: trigger event for this file
 
@@ -139,28 +139,17 @@ foreach ($columns as $column) {
 $table->head[] = '';
 
 $table->width = "95%";
+$fs = get_file_storage();
 foreach ($turnitin_files as $tf) {
-    //heavy way to obtain filename and object to allow download link:
-    //TODO: there must be a nicer way to do this.
-    $modulecontext = get_context_instance(CONTEXT_MODULE, $tf->cm);
-    $submission = $DB->get_record('assignment_submissions', array('assignment'=>$tf->cminstance, 'userid'=>$tf->userid));
-    $fs = get_file_storage();
-    $files = $fs->get_area_files($modulecontext->id, 'mod_assignment', 'submission', $submission->id);
-    $filelink = $tf->identifier;
-    if (!empty($files)) {
-        foreach($files as $file) {
-            if ($file->get_contenthash()==$tf->identifier) {
-                $filelink = '<a href="'.$CFG->wwwroot.'/files/">'.$file->get_filename()."</a>";
-
-                $url = file_encode_url("$CFG->wwwroot/pluginfile.php", '/'.$modulecontext->id.'/mod_assignment/submission/'.$file->get_itemid(). $file->get_filepath().$file->get_filename(), true);
-                $filelink = html_writer::link($url, $file->get_filename());
-            }
-        }
+    $file = $fs->get_file_by_hash($tf->identifier);
+    if ($file) {
+        $filelink = '<a href="'.$CFG->wwwroot.'/files/">'.$file->get_filename()."</a>";
+        $url = file_encode_url("$CFG->wwwroot/pluginfile.php", '/'.$modulecontext->id.'/mod_assignment/submission/'.$file->get_itemid(). $file->get_filepath().$file->get_filename(), true);
+        $filelink = html_writer::link($url, $file->get_filename());
     }
 
-
     $user = "<a href='".$CFG->wwwroot."/user/profile.php?id=".$tf->userid."'>".fullname($tf)."</a>";
-    
+
     $reset = '<a href="turnitin_errors.php?reset=1&id='.$tf->id.'">'.get_string('resubmit','plagiarism_turnitin').'</a> | '.
              '<a href="turnitin_errors.php?delete=1&id='.$tf->id.'">'.get_string('delete').'</a>';
     $cmlink = '<a href="'.$CFG->wwwroot.'/'.$tf->moduletype.'/view.php?id='.$tf->cm.'">'.get_string('module', 'plagiarism_turnitin').'</a>';
