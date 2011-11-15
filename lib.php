@@ -99,6 +99,10 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
             return $results['error'];
         }
 
+        if (empty($results['analyzed'])) {
+            return '<br />';
+        }
+
         // TII has successfully returned a score.
         $rank = plagiarism_get_css_rank($results['score']);
 
@@ -182,7 +186,11 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
             // No record of that submission - so no links can be returned
             return false;
         }
-        $results = array();
+        $results = array(
+                'analyzed' => 0,
+                'score' => '',
+                'reporturl' => '',
+                );
         if(isset($plagiarismfile->statuscode) && $plagiarismfile->statuscode != 'success') {
             //always display errors - even if the student isn't able to see report/score.
             $results['error'] = turnitin_error_text($plagiarismfile->statuscode);
@@ -190,6 +198,7 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
         }
 
         // All non-standard situations handled.
+        $results['analyzed'] = 1;
         $results['score'] = $plagiarismfile->similarityscore;
         if ($viewfullreport) {
             // User gets to see link to similarity report
