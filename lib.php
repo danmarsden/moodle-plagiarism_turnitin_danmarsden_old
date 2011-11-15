@@ -492,11 +492,8 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
                     $submission = $assignmentbase->get_submission($eventdata->userid);
                     $modulecontext = get_context_instance(CONTEXT_MODULE, $eventdata->cmid);
                     $fs = get_file_storage();
-                    if ($files = $fs->get_area_files($modulecontext->id, 'mod_assignment', 'submission', $submission->id, "timemodified")) {
+                    if ($files = $fs->get_area_files($modulecontext->id, 'mod_assignment', 'submission', $submission->id, "timemodified", false)) {
                         foreach ($files as $file) {
-                            if ($file->get_filename()==='.') {
-                                continue;
-                            }
                             //TODO: need to check if this file has already been sent! - possible that the file was sent before draft submit was set.
                             $pid = plagiarism_update_record($cmid, $eventdata->userid, $file->get_pathnamehash());
                             if (!empty($pid)) {
