@@ -1484,7 +1484,7 @@ function turnitin_event_mod_deleted($eventdata) {
  * @param int $cmid The id of the moodle coursemodule for this activity
  * @return string
  */
-function tunrnitin_get_assign_name($name, $cmid) {
+function turnitin_get_assign_name($name, $cmid) {
     $suffix   = '-'.$cmid; // suffix first, so we can keep it 90 chars even if cmid is long
     $maxnamelength = 90 - strlen($suffix);
     $shortname = (strlen($name) > $maxnamelength) ? substr($name, 0, $maxnamelength) : $name;
