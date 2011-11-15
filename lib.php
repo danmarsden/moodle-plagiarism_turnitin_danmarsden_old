@@ -867,7 +867,7 @@ function turnitin_send_file($pid, $plagiarismsettings, $file) {
          mtrace('could not create user/login to turnitin code:'.$tiixml->rcode[0]);
     } else {
         $plagiarism_file = $DB->get_record('turnitin_files', array('id'=>$pid)); //make sure we get latest record as it may have changed
-        $plagiarism_file->statuscode = $tiixml->rcode[0];
+        $plagiarism_file->statuscode = (string)$tiixml->rcode[0];
         if (! $DB->update_record('turnitin_files', $plagiarism_file)) {
             debugging("Error updating turnitin_files record");
         }
@@ -891,7 +891,7 @@ function turnitin_send_file($pid, $plagiarismsettings, $file) {
             mtrace('could not enrol user in turnitin class code:'.$tiixml->rcode[0]);
         } else {
             $plagiarism_file = $DB->get_record('turnitin_files', array('id'=>$pid)); //make sure we get latest record as it may have changed
-            $plagiarism_file->statuscode = $tiixml->rcode[0];
+            $plagiarism_file->statuscode = (string)$tiixml->rcode[0];
             if (! $DB->update_record('turnitin_files', $plagiarism_file)) {
                 debugging("Error updating turnitin_files record");
             }
@@ -913,13 +913,13 @@ function turnitin_send_file($pid, $plagiarismsettings, $file) {
             $tiixml = turnitin_post_data($tii, $plagiarismsettings, $file, $pid);
             if ($tiixml->rcode[0] == TURNITIN_RESP_PAPER_SENT) { //we need to return the oid and save it!
                 $plagiarism_file = $DB->get_record('turnitin_files', array('id'=>$pid)); //make sure we get latest record as it may have changed
-                $plagiarism_file->externalid = $tiixml->objectID[0];
+                $plagiarism_file->externalid = (string)$tiixml->objectID[0];
                 debugging("success uploading assignment", DEBUG_DEVELOPER);
             } else {
                 $plagiarism_file = $DB->get_record('turnitin_files', array('id'=>$pid)); //make sure we get latest record as it may have changed
                 debugging("failed to upload assignment errorcode".$tiixml->rcode[0]);
             }
-            $plagiarism_file->statuscode = $tiixml->rcode[0];
+            $plagiarism_file->statuscode = (string)$tiixml->rcode[0];
             if (! $DB->update_record('turnitin_files', $plagiarism_file)) {
                 debugging("Error updating turnitin_files record");
             }
@@ -982,7 +982,7 @@ function turnitin_get_scores($plagiarismsettings) {
             $tiixml = plagiarism_get_xml(turnitin_get_url($tii, $plagiarismsettings, false, $file->id));
             if ($tiixml->rcode[0] == TURNITIN_RESP_SCORE_RECEIVED) { //this is the success code for uploading a file. - we need to return the oid and save it!
                 $file = $DB->get_record('turnitin_files', array('id'=>$file->id)); //make sure we get latest record as it may have changed
-                $file->similarityscore = $tiixml->originalityscore[0];
+                $file->similarityscore = (string)$tiixml->originalityscore[0];
                 $file->statuscode = 'success';
                 if (! $DB->update_record('turnitin_files', $file)) {
                     debugging("Error updating turnitin_files record");
@@ -991,7 +991,7 @@ function turnitin_get_scores($plagiarismsettings) {
                 mtrace('similarity report not available yet for fileid:'.$file->id. " code:".$tiixml->rcode[0]);
             } else if (!empty($tiixml->rcode[0])) {
                 mtrace('similarity report check failed for fileid:'.$file->id. " code:".$tiixml->rcode[0]);
-                $file->statuscode = $tiixml->rcode[0];
+                $file->statuscode = (string)$tiixml->rcode[0];
                 if (! $DB->update_record('turnitin_files', $file)) {
                     debugging("Error updating turnitin_files record");
                 }
@@ -1169,11 +1169,11 @@ function turnitin_update_assignment($plagiarismsettings, $plagiarismvalues, $eve
                         $configval = new stdclass();
                         $configval->cm = $cm->id;
                         $configval->name = 'turnitin_assignid';
-                        $configval->value = $tiixml->assignmentid[0];
+                        $configval->value = (string)$tiixml->assignmentid[0];
                         $DB->insert_record('turnitin_config', $configval);
                     } else {
                         $configval = $DB->get_record('turnitin_config', array('cm'=> $cm->id, 'name'=> 'turnitin_assignid'));
-                        $configval->value = $tiixml->assignmentid[0];
+                        $configval->value = (string)$tiixml->assignmentid[0];
                         $DB->update_record('turnitin_config', $configval);
                     }
                 }
