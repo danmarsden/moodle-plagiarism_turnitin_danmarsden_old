@@ -32,6 +32,8 @@ define('PLAGIARISM_TII_SHOW_NEVER', 0);
 define('PLAGIARISM_TII_SHOW_ALWAYS', 1);
 define('PLAGIARISM_TII_SHOW_CLOSED', 2);
 
+define('PLAGIARISM_TII_DRAFTSUBMIT_IMMEDIATE', 0);
+define('PLAGIARISM_TII_DRAFTSUBMIT_FINAL', 1);
 
 //Turnitin fcmd types - return values.
 define('TURNITIN_LOGIN', 1);
@@ -437,13 +439,12 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
     }
     public function event_handler($eventdata) {
         global $DB, $CFG;
-        $result = true;
         $plagiarismsettings = $this->get_settings();
         $cmid = (!empty($eventdata->cm->id)) ? $eventdata->cm->id : $eventdata->cmid;
         $plagiarismvalues = $DB->get_records_menu('turnitin_config', array('cm'=>$cmid),'','name,value');
         if (!$plagiarismsettings || empty($plagiarismvalues['use_turnitin'])) {
             //nothing to do here... move along!
-            return $result;
+            return true;
         }
 
         if ($eventdata->eventtype == "mod_created") {
@@ -455,53 +456,74 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
         } else if ($eventdata->eventtype=="file_uploaded") {
             // check if the module associated with this event still exists
             if (!$DB->record_exists('course_modules', array('id' => $eventdata->cmid))) {
-                return $result;
+                return true;
             }
 
             if (!empty($eventdata->file) && empty($eventdata->files)) { //single assignment type passes a single file
                 $eventdata->files[] = $eventdata->file;
             }
 
-            if (!empty($eventdata->files)) { //this is an upload event with multiple files
-                foreach ($eventdata->files as $efile) {
-                    if ($efile->get_filename() ==='.') {
-                        continue;
-                    }
-                    //hacky way to check file still exists
-                    $fs = get_file_storage();
-                    $fileid = $fs->get_file_by_hash($efile->get_pathnamehash());
-                    if (empty($fileid)) {
-                        mtrace("nofilefound!");
-                        continue;
-                    }
-                    if (empty($plagiarismvalues['plagiarism_draft_submit'])) { //check if this is an advanced assignment and shouldn't send the file yet.
-                        //TODO - check if this particular file has already been submitted.
-                        $pid = plagiarism_update_record($cmid, $eventdata->userid, $efile->get_pathnamehash());
-                        if (!empty($pid)) {
-                            $result = turnitin_send_file($pid, $plagiarismsettings, $efile);
-                        }
-                    }
-                }
-            } else { //this is a finalize event
-                mtrace("finalise");
-                if (isset($plagiarismvalues['plagiarism_draft_submit']) && $plagiarismvalues['plagiarism_draft_submit'] == 1) { // is file to be sent on final submission?
-                    require_once("$CFG->dirroot/mod/assignment/lib.php"); //HACK to include filelib so that when event cron is run then file_storage class is available
+            if (empty($eventdata->files)) {
+                // There are no files attached to this 'fileuploaded' event.
+                // This is a 'finalize' event - assignment-focused functionality
+                trace("finalise");
+                if (isset($plagiarismvalues['plagiarism_draft_submit'])
+                        && $plagiarismvalues['plagiarism_draft_submit'] == PLAGIARISM_TII_DRAFTSUBMIT_FINAL) {
+                    // Drafts haven't previously been sent
+                    // get assignment details, list of draft files and submit to TII.
+                    require_once("$CFG->dirroot/mod/assignment/lib.php");
                     // we need to get a list of files attached to this assignment and put them in an array, so that
                     // we can submit each of them for processing.
                     $assignmentbase = new assignment_base($cmid);
                     $submission = $assignmentbase->get_submission($eventdata->userid);
                     $modulecontext = get_context_instance(CONTEXT_MODULE, $eventdata->cmid);
                     $fs = get_file_storage();
+                    $result = true;
                     if ($files = $fs->get_area_files($modulecontext->id, 'mod_assignment', 'submission', $submission->id, "timemodified", false)) {
                         foreach ($files as $file) {
+                            $fileresult = false;
                             //TODO: need to check if this file has already been sent! - possible that the file was sent before draft submit was set.
                             $pid = plagiarism_update_record($cmid, $eventdata->userid, $file->get_pathnamehash());
                             if (!empty($pid)) {
-                                $result = turnitin_send_file($pid, $plagiarismsettings, $file);
+                                $fileresult = turnitin_send_file($pid, $plagiarismsettings, $file);
                             }
+                            $result = $fileresult && $result;
                         }
                     }
+                    return $result;
                 }
+            }
+
+            // Assignment-module focused functionality:
+            if (isset($plagiarismvalues['plagiarism_draft_submit'])
+                    && $plagiarismvalues['plagiarism_draft_submit'] == PLAGIARISM_TII_DRAFTSUBMIT_FINAL) {
+                // Files shouldn't be submitted to TII until 'finalize' file upload event.
+                return true;
+            }
+
+            // Normal scenario - this is an upload event with one or more attached files
+            // Attached file(s) are to be immediately submitted to TII
+            $result = true;
+            foreach ($eventdata->files as $efile) {
+                $fileresult = false;
+                if ($efile->get_filename() ==='.') {
+                    // This is a directory - nothing to do.
+                    continue;
+                }
+                //hacky way to check file still exists
+                $fs = get_file_storage();
+                $fileid = $fs->get_file_by_hash($efile->get_pathnamehash());
+                if (empty($fileid)) {
+                    mtrace("nofilefound!");
+                    continue;
+                }
+
+                //TODO - check if this particular file has already been submitted.
+                $pid = plagiarism_update_record($cmid, $eventdata->userid, $efile->get_pathnamehash());
+                if (!empty($pid)) {
+                    $fileresult = turnitin_send_file($pid, $plagiarismsettings, $efile);
+                }
+                $result = $result && $fileresult;
             }
             return $result;
         } else if ($eventdata->eventtype=="quizattempt") {
@@ -1268,7 +1290,10 @@ function turnitin_get_responsetime($plagiarismsettings) {
 function turnitin_get_form_elements($mform) {
         $ynoptions = array( 0 => get_string('no'), 1 => get_string('yes'));
         $tiishowoptions = array(PLAGIARISM_TII_SHOW_NEVER => get_string("never"), PLAGIARISM_TII_SHOW_ALWAYS => get_string("always"), PLAGIARISM_TII_SHOW_CLOSED => get_string("showwhenclosed", "plagiarism_turnitin"));
-        $tiidraftoptions = array(0 => get_string("submitondraft","plagiarism_turnitin"), 1 => get_string("submitonfinal","plagiarism_turnitin"));
+        $tiidraftoptions = array(
+                PLAGIARISM_TII_DRAFTSUBMIT_IMMEDIATE => get_string("submitondraft","plagiarism_turnitin"),
+                PLAGIARISM_TII_DRAFTSUBMIT_FINAL => get_string("submitonfinal","plagiarism_turnitin"),
+                );
         $reportgenoptions = array( 0 => get_string('reportgenimmediate', 'plagiarism_turnitin'), 1 => get_string('reportgenimmediateoverwrite', 'plagiarism_turnitin'), 2 => get_string('reportgenduedate', 'plagiarism_turnitin'));
         $excludetype = array( 0 => get_string('no'), 1 => get_string('wordcount', 'plagiarism_turnitin'), 2 => get_string('percentage', 'plagiarism_turnitin'));
 
