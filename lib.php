@@ -174,7 +174,7 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
         }
 
         $plagiarismfile = $DB->get_record_sql("SELECT * FROM {turnitin_files} WHERE cm = ?" .
-                " AND userid = ? AND " . $DB->sql_compare_text('identifier') . " = ?",
+                " AND userid = ? AND identifier = ?",
                 array($cmid, $userid,$filehash));
         if (empty($plagiarismfile)) {
             // No record of that submission - so no links can be returned
@@ -276,7 +276,7 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
                 $sql = 'SELECT value
                         FROM {turnitin_config}
                         WHERE cm = ?
-                        AND ' . $DB->sql_compare_text('name', 255) . ' = ' . $DB->sql_compare_text('?', 255);
+                        AND name = ?';
                 $params = array($cmid, 'use_turnitin');
                 $showdisclosure = $DB->get_field_sql($sql, $params);
                 if ($showdisclosure) {
@@ -844,7 +844,7 @@ function turnitin_send_file($pid, $plagiarismsettings, $file) {
         $DB->delete_records('turnitin_files', array('id'=>$plagiarism_file->id));
         return true;
     }
-    $dtstart = $DB->get_record_sql('SELECT * FROM {turnitin_config} WHERE cm = ? AND '.$DB->sql_compare_text('name'). "= ?", array($cm->id, 'turnitin_dtstart'));
+    $dtstart = $DB->get_record_sql('SELECT * FROM {turnitin_config} WHERE cm = ? AND name = ?', array($cm->id, 'turnitin_dtstart'));
     if (!empty($dtstart) && $dtstart->value+600 > time()) {
         mtrace("Warning: assignment start date is too early ".date('Y-m-d H:i:s', $dtstart->value)." in course $course->shortname assignment $module->name will delay sending files until next cron");
         return false; //TODO: check that this doesn't cause a failure in cron
@@ -876,7 +876,7 @@ function turnitin_send_file($pid, $plagiarismsettings, $file) {
         $sql = 'SELECT value
                 FROM {turnitin_config}
                 WHERE cm = ?
-                AND ' . $DB->sql_compare_text('name', 255) . ' = ' . $DB->sql_compare_text('?', 255);
+                AND name = ?';
         $params = array($cm->id, 'turnitin_assignid');
         $turnitin_assignid = $DB->get_field_sql($sql, $params);
 
@@ -1375,7 +1375,7 @@ function plagiarism_update_record($cmid, $userid, $identifier, $attempt=0) {
     $plagiarism_file = $DB->get_record_sql(
                                 "SELECT * FROM {turnitin_files}
                                  WHERE cm = ? AND userid = ? AND " .
-                                $DB->sql_compare_text('identifier') . " = ?",
+                                "identifier = ?",
                                 array($cmid, $userid,$identifier));
     if (!empty($plagiarism_file)) {
         //update record.
