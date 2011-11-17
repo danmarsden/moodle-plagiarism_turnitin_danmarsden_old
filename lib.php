@@ -145,8 +145,7 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
                 'WHERE cm.id = ?';
         $moduledetail = $DB->get_record_sql($modulesql, array($cmid));
         if (!empty($moduledetail)) {
-            $sql = "SELECT * FROM " . $CFG->prefix . $moduledetail->name . " WHERE id= ?";
-            $module = $DB->get_record_sql($sql, array($moduledetail->instance));
+            $module = $DB->get_record($moduledetail->name, array('id'=>$moduledetail->instance));
         }
         if (empty($module)) {
             // No such cmid
@@ -173,9 +172,8 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
             return false;
         }
 
-        $plagiarismfile = $DB->get_record_sql("SELECT * FROM {turnitin_files} WHERE cm = ?" .
-                " AND userid = ? AND identifier = ?",
-                array($cmid, $userid,$filehash));
+        $plagiarismfile = $DB->get_record('turnitin_files',
+                array('cm' => $cmid, 'userid' => $userid, 'identifier' => $filehash));
         if (empty($plagiarismfile)) {
             // No record of that submission - so no links can be returned
             return false;
@@ -273,12 +271,8 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
         if ($plagiarismsettings = $this->get_settings()) {
             if (!empty($plagiarismsettings['turnitin_student_disclosure'])) {
 
-                $sql = 'SELECT value
-                        FROM {turnitin_config}
-                        WHERE cm = ?
-                        AND name = ?';
-                $params = array($cmid, 'use_turnitin');
-                $showdisclosure = $DB->get_field_sql($sql, $params);
+                $params = array('cm' => $cmid, 'name' => 'use_turnitin');
+                $showdisclosure = $DB->get_field('turnitin_config', 'value', $params);
                 if ($showdisclosure) {
                     echo $OUTPUT->box_start('generalbox boxaligncenter', 'intro');
                     $formatoptions = new stdClass;
@@ -844,7 +838,7 @@ function turnitin_send_file($pid, $plagiarismsettings, $file) {
         $DB->delete_records('turnitin_files', array('id'=>$plagiarism_file->id));
         return true;
     }
-    $dtstart = $DB->get_record_sql('SELECT * FROM {turnitin_config} WHERE cm = ? AND name = ?', array($cm->id, 'turnitin_dtstart'));
+    $dtstart = $DB->get_record('turnitin_config', array('cm' => $cm->id, 'name' => 'turnitin_dtstart'));
     if (!empty($dtstart) && $dtstart->value+600 > time()) {
         mtrace("Warning: assignment start date is too early ".date('Y-m-d H:i:s', $dtstart->value)." in course $course->shortname assignment $module->name will delay sending files until next cron");
         return false; //TODO: check that this doesn't cause a failure in cron
@@ -873,12 +867,8 @@ function turnitin_send_file($pid, $plagiarismsettings, $file) {
         }
 
         //now enrol user in class under the given account (fid=3)
-        $sql = 'SELECT value
-                FROM {turnitin_config}
-                WHERE cm = ?
-                AND name = ?';
-        $params = array($cm->id, 'turnitin_assignid');
-        $turnitin_assignid = $DB->get_field_sql($sql, $params);
+        $params = array('cm' => $cm->id, 'name' => 'turnitin_assignid');
+        $turnitin_assignid = $DB->get_field('turnitin_config', 'value', $params);
 
         if (!empty($turnitin_assignid)) {
             $tii['assignid'] = $turnitin_assignid;
@@ -1372,11 +1362,8 @@ function plagiarism_update_record($cmid, $userid, $identifier, $attempt=0) {
         return false;
     }
     //now update or insert record into turnitin_files
-    $plagiarism_file = $DB->get_record_sql(
-                                "SELECT * FROM {turnitin_files}
-                                 WHERE cm = ? AND userid = ? AND " .
-                                "identifier = ?",
-                                array($cmid, $userid,$identifier));
+    $plagiarism_file = $DB->get_record('turnitin_files',
+                        array('cm' => $cmid, 'userid' => $userid, 'identifier' => $identifier));
     if (!empty($plagiarism_file)) {
         //update record.
         //only update this record if it isn't pending or in a success state
