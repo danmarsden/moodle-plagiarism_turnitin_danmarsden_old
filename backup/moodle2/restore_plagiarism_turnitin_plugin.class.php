@@ -61,8 +61,11 @@ class restore_plagiarism_turnitin_plugin extends restore_plagiarism_plugin {
 
         if ($this->task->is_samesite() && !$this->existingcourse) { //files can only be restored if this is the same site as was backed up.
             $recexists = false;
+            if (! is_object($data)) {
+                $data = (object) $data;
+            }
             if ($data->name == 'turnitin_assignid') { //check if this assignid already exists
-                $recexists = $DB->record_exists('turnitin_config', array('name'=>'turnitin_assignid', 'value', $data->value));
+                $recexists = $DB->record_exists('turnitin_config', array('name'=>'turnitin_assignid', 'value' => $data->value));
             }
             if (!$recexists) {
                 $data = (object)$data;
@@ -81,7 +84,7 @@ class restore_plagiarism_turnitin_plugin extends restore_plagiarism_plugin {
             $data = (object)$data;
             $recexists = false;
             if (!empty($data->externalid)) {
-                $recexists = $DB->record_exists('turnitin_file', array('externalid'=>$data->externalid));
+                $recexists = $DB->record_exists('turnitin_files', array('externalid'=>$data->externalid));
             }
             if (!$recexists) { //only restore this record if one doesn't exist for this externalid.
                 $oldid = $data->id;
