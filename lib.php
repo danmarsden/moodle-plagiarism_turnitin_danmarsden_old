@@ -1111,6 +1111,8 @@ function turnitin_update_assignment($plagiarismsettings, $plagiarismvalues, $eve
                     $tii['dtstart']  = rawurlencode(date('Y-m-d H:i:s', $module->timeavailable));
                 } else if (!empty($eventdata->timeavailable)) {
                     $tii['dtstart']  = rawurlencode(date('Y-m-d H:i:s', $eventdata->timeavailable));
+                } else if (!empty($module->timecreated)) {
+                    $tii['dtstart']  = rawurlencode(date('Y-m-d H:i:s', $module->timecreated));
                 } else {
                     // TODO is this really necessary on an update?
                     $tii['dtstart']  = rawurlencode(date('Y-m-d H:i:s', time()));
