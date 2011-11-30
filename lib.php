@@ -1100,17 +1100,20 @@ function turnitin_update_assignment($plagiarismsettings, $plagiarismvalues, $eve
             if (empty($plagiarismvalues['turnitin_assignid'])) {
                 $tii['assignid']   = "a_".time().rand(10,5000); //some unique random id only used once.
                 $tii['fcmd'] = TURNITIN_RETURN_XML;
-                // New assignments cannout have a start date/time in the past (as judged by TII servers)
+                // New assignments cannot have a start date/time in the past (as judged by TII servers)
                 // add an hour to account for possibility of our clock being fast, or TII clock being slow.
                 $tii['dtstart'] = rawurlencode(date('Y-m-d H:i:s', time()));
                 $tii['dtdue'] = rawurlencode(date('Y-m-d H:i:s', time()+(365 * 24 * 60 * 60)));
             } else {
                 $tii['assignid'] = $plagiarismvalues['turnitin_assignid'];
                 $tii['fcmd'] = TURNITIN_UPDATE_RETURN_XML;
-                if (empty($module->timeavailable)) {
-                    $tii['dtstart'] = rawurlencode(date('Y-m-d H:i:s', time()));
-                } else {
+                if (!empty($module->timeavailable)) {
                     $tii['dtstart']  = rawurlencode(date('Y-m-d H:i:s', $module->timeavailable));
+                } else if (!empty($eventdata->timeavailable)) {
+                    $tii['dtstart']  = rawurlencode(date('Y-m-d H:i:s', $eventdata->timeavailable));
+                } else {
+                    // TODO is this really necessary on an update?
+                    $tii['dtstart']  = rawurlencode(date('Y-m-d H:i:s', time()));
                 }
                 if (empty($module->timedue)) {
                     $tii['dtdue'] = rawurlencode(date('Y-m-d H:i:s', time()+(365 * 24 * 60 * 60)));
