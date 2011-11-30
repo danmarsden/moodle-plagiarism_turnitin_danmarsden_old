@@ -1114,7 +1114,7 @@ function turnitin_update_assignment($plagiarismsettings, $plagiarismvalues, $eve
                 } else if (!empty($module->timecreated)) {
                     $tii['dtstart']  = rawurlencode(date('Y-m-d H:i:s', $module->timecreated));
                 } else {
-                    // TODO is this really necessary on an update?
+                    // Without this, turnitin will throw an error, even on update
                     $tii['dtstart']  = rawurlencode(date('Y-m-d H:i:s', time()));
                 }
                 if (empty($module->timedue)) {
