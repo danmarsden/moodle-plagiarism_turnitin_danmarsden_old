@@ -1102,7 +1102,7 @@ function turnitin_update_assignment($plagiarismsettings, $plagiarismvalues, $eve
                 $tii['fcmd'] = TURNITIN_RETURN_XML;
                 // New assignments cannout have a start date/time in the past (as judged by TII servers)
                 // add an hour to account for possibility of our clock being fast, or TII clock being slow.
-                $tii['dtstart'] = rawurlencode(date('Y-m-d H:i:s', time()+60*60));
+                $tii['dtstart'] = rawurlencode(date('Y-m-d H:i:s', time()));
                 $tii['dtdue'] = rawurlencode(date('Y-m-d H:i:s', time()+(365 * 24 * 60 * 60)));
             } else {
                 $tii['assignid'] = $plagiarismvalues['turnitin_assignid'];
