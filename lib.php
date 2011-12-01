@@ -448,7 +448,17 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
            return  turnitin_update_assignment($plagiarismsettings, $plagiarismvalues, $eventdata, 'delete');
         } else if ($eventdata->eventtype=="file_uploaded") {
             // check if the module associated with this event still exists
-            if (!$DB->record_exists('course_modules', array('id' => $eventdata->cmid))) {
+            $cm = $DB->record_exists('course_modules', array('id' => $eventdata->cmid));
+            if (!$cm) {
+                return $result;
+            }
+
+            // If the assignment has only just been set up, we don't want to try to submit to it, or
+            // we'll get a 1001 error
+            $assignmentstarttime = $DB->get_field('turnitin_config', array('cm' => $cm->id,
+                                                                           'name' => 'turnitin_dtsart'));
+            if (strtotime('+5 minutes', $assignmentstarttime) < time()) {
+                // Probably not set up properly - we need to allow for wonky server clocks.
                 return $result;
             }
 
