@@ -1102,8 +1102,18 @@ function turnitin_update_assignment($plagiarismsettings, $plagiarismvalues, $eve
                 $tii['fcmd'] = TURNITIN_RETURN_XML;
                 // New assignments cannot have a start date/time in the past (as judged by TII servers)
                 // add an hour to account for possibility of our clock being fast, or TII clock being slow.
-                $tii['dtstart'] = rawurlencode(date('Y-m-d H:i:s', time()));
-                $tii['dtdue'] = rawurlencode(date('Y-m-d H:i:s', time()+(365 * 24 * 60 * 60)));
+                $timestamp = strtotime('+10 minutes');
+                $tii['dtstart'] = rawurlencode(date('Y-m-d H:i:s', $timestamp));
+                // Store the start time. We can't make it instant in case Turnitin is flaky and
+                // thinks we are trying to start in the past. Don't want to submit file till it is
+                // definitely in the past though.
+                $timestartconfig = new stdClass();
+                $timestartconfig->cm = $cm->id;
+                $timestartconfig->name = 'turnitin_dtstart';
+                $timestartconfig->value = $timestamp;
+                $DB->insert_record('turnitin_config', $timestartconfig);
+
+                $tii['dtdue'] = rawurlencode(date('Y-m-d H:i:s', strtotime('+1 year')));
             } else {
                 $tii['assignid'] = $plagiarismvalues['turnitin_assignid'];
                 $tii['fcmd'] = TURNITIN_UPDATE_RETURN_XML;
