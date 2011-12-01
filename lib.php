@@ -1097,13 +1097,14 @@ function turnitin_update_assignment($plagiarismsettings, $plagiarismvalues, $eve
             }
             //now create Assignment in Class
             //first check if this assignment has already been created
+            $tunitindateformat = 'Y-m-d H:i:s';
             if (empty($plagiarismvalues['turnitin_assignid'])) {
                 $tii['assignid']   = "a_".time().rand(10,5000); //some unique random id only used once.
                 $tii['fcmd'] = TURNITIN_RETURN_XML;
                 // New assignments cannot have a start date/time in the past (as judged by TII servers)
                 // add an hour to account for possibility of our clock being fast, or TII clock being slow.
                 $timestamp = strtotime('+10 minutes');
-                $tii['dtstart'] = rawurlencode(date('Y-m-d H:i:s', $timestamp));
+                $tii['dtstart'] = rawurlencode(date($tunitindateformat, $timestamp));
                 // Store the start time. We can't make it instant in case Turnitin is flaky and
                 // thinks we are trying to start in the past. Don't want to submit file till it is
                 // definitely in the past though.
@@ -1113,24 +1114,24 @@ function turnitin_update_assignment($plagiarismsettings, $plagiarismvalues, $eve
                 $timestartconfig->value = $timestamp;
                 $DB->insert_record('turnitin_config', $timestartconfig);
 
-                $tii['dtdue'] = rawurlencode(date('Y-m-d H:i:s', strtotime('+1 year')));
+                $tii['dtdue'] = rawurlencode(date($tunitindateformat, strtotime('+1 year')));
             } else {
                 $tii['assignid'] = $plagiarismvalues['turnitin_assignid'];
                 $tii['fcmd'] = TURNITIN_UPDATE_RETURN_XML;
                 if (!empty($module->timeavailable)) {
-                    $tii['dtstart']  = rawurlencode(date('Y-m-d H:i:s', $module->timeavailable));
+                    $tii['dtstart']  = rawurlencode(date($tunitindateformat, $module->timeavailable));
                 } else if (!empty($eventdata->timeavailable)) {
-                    $tii['dtstart']  = rawurlencode(date('Y-m-d H:i:s', $eventdata->timeavailable));
+                    $tii['dtstart']  = rawurlencode(date($tunitindateformat, $eventdata->timeavailable));
                 } else if (!empty($module->timecreated)) {
-                    $tii['dtstart']  = rawurlencode(date('Y-m-d H:i:s', $module->timecreated));
+                    $tii['dtstart']  = rawurlencode(date($tunitindateformat, $module->timecreated));
                 } else {
                     // Without this, turnitin will throw an error, even on update
-                    $tii['dtstart']  = rawurlencode(date('Y-m-d H:i:s', time()));
+                    $tii['dtstart']  = rawurlencode(date($tunitindateformat, time()));
                 }
                 if (empty($module->timedue)) {
-                    $tii['dtdue'] = rawurlencode(date('Y-m-d H:i:s', time()+(365 * 24 * 60 * 60)));
+                    $tii['dtdue'] = rawurlencode(date($tunitindateformat, strtotime('+1 year')));
                 } else {
-                    $tii['dtdue']    = rawurlencode(date('Y-m-d H:i:s', $module->timedue));
+                    $tii['dtdue']    = rawurlencode(date($tunitindateformat, $module->timedue));
                 }
             }
             $tii['assign']   = turnitin_get_assign_name($module->name, $cm->id); //assignment name stored in TII
@@ -1187,10 +1188,10 @@ function turnitin_update_assignment($plagiarismsettings, $plagiarismvalues, $eve
                     $tii['assignid'] = $tiixml->assignmentid[0];
                     $tii['fcmd'] = TURNITIN_UPDATE_RETURN_XML;
                     if (!empty($module->timeavailable)) {
-                        $tii['dtstart']  = rawurlencode(date('Y-m-d H:i:s', $module->timeavailable));
+                        $tii['dtstart']  = rawurlencode(date($tunitindateformat, $module->timeavailable));
                     }
                     if (!empty($module->timedue)) {
-                        $tii['dtdue']    = rawurlencode(date('Y-m-d H:i:s', $module->timedue));
+                        $tii['dtdue']    = rawurlencode(date($tunitindateformat, $module->timedue));
                     }
                 }
                 $tiixml = turnitin_post_data($tii, $plagiarismsettings);
