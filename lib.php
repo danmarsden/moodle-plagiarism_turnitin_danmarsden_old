@@ -455,8 +455,8 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
 
             // If the assignment has only just been set up, we don't want to try to submit to it, or
             // we'll get a 1001 error
-            $assignmentstarttime = $DB->get_field('turnitin_config', array('cm' => $cm->id,
-                                                                           'name' => 'turnitin_dtsart'));
+            $assignmentstarttime = $DB->get_field('turnitin_config', 'value', array('cm' => $cm->id,
+                                                                                    'name' => 'turnitin_dtsart'));
             if (strtotime('+5 minutes', $assignmentstarttime) < time()) {
                 // Probably not set up properly - we need to allow for wonky server clocks.
                 return $result;
@@ -1128,16 +1128,8 @@ function turnitin_update_assignment($plagiarismsettings, $plagiarismvalues, $eve
             } else {
                 $tii['assignid'] = $plagiarismvalues['turnitin_assignid'];
                 $tii['fcmd'] = TURNITIN_UPDATE_RETURN_XML;
-                if (!empty($module->timeavailable)) {
-                    $tii['dtstart']  = rawurlencode(date($tunitindateformat, $module->timeavailable));
-                } else if (!empty($eventdata->timeavailable)) {
-                    $tii['dtstart']  = rawurlencode(date($tunitindateformat, $eventdata->timeavailable));
-                } else if (!empty($module->timecreated)) {
-                    $tii['dtstart']  = rawurlencode(date($tunitindateformat, $module->timecreated));
-                } else {
-                    // Without this, turnitin will throw an error, even on update
-                    $tii['dtstart']  = rawurlencode(date($tunitindateformat, time()));
-                }
+                $tii['dtstart']  = $DB->get_field('turnitin_config', 'value', array('cm' => $cm->id,
+                                                                                    'name' => 'turnitin_dtsart'));
                 if (empty($module->timedue)) {
                     $tii['dtdue'] = rawurlencode(date($tunitindateformat, strtotime('+1 year')));
                 } else {
