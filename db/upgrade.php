@@ -146,6 +146,7 @@ function xmldb_plagiarism_turnitin_upgrade($oldversion) {
             $setting->name = 'turnitin_dtstart';
 
             $coursemodule = $DB->get_record('course_modules', array('id' => $assignment->cm));
+            $module = false;
             if ($coursemodule) {
                 $modulename = $DB->get_field('modules', 'name', array('id' => $coursemodule->module));
                 $module = $DB->get_record($modulename, array('id' => $coursemodule->instance));
