@@ -453,7 +453,7 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
            return  turnitin_update_assignment($plagiarismsettings, $plagiarismvalues, $eventdata, 'delete');
         } else if ($eventdata->eventtype=="file_uploaded") {
             // check if the module associated with this event still exists
-            $cm = $DB->record_exists('course_modules', array('id' => $eventdata->cmid));
+            $cm = $DB->get_record('course_modules', array('id' => $eventdata->cmid));
             if (!$cm) {
                 return $result;
             }
