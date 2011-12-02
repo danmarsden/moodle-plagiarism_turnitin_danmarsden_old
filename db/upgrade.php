@@ -138,7 +138,7 @@ function xmldb_plagiarism_turnitin_upgrade($oldversion) {
     if ($oldversion < 2011111001) {
         // All assignments need to have a start time
 
-        $existingassignments = $DB->get_records_sql('turnitin_config', array('name' => 'turnitin_assignid'));
+        $existingassignments = $DB->get_records('turnitin_config', array('name' => 'turnitin_assignid'));
 
         foreach ($existingassignments as $assignment) {
             $setting = new stdClass();
