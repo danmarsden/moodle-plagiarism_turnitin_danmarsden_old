@@ -90,6 +90,7 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
         $file = $linkarray['file'];
         $results = $this->get_file_results($cmid, $userid, $file);
         if (empty($results)) {
+            // Cron has not run yet
             return '<br />';
         }
 
@@ -121,11 +122,11 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
     * Get the information turnitin has about a file
     * @param int $cmid the id of the coursemodule file was submitted for
     * @param int $userid the id of the user who submitted the file
-    * @param object $file file object describing a moodle file which was submited to TII
+    * @param stored_file $file file object describing a moodle file which was submited to TII
     * @return mixed - false if no info available, or an array describing what's known about the TII submission
     */
-    public function get_file_results($cmid, $userid, $file) {
-        global $DB, $USER, $COURSE, $CFG;
+    public function get_file_results($cmid, $userid, stored_file $file) {
+        global $DB, $USER, $COURSE, $OUTPUT;
 
         $plagiarismsettings = $this->get_settings();
         if (empty($plagiarismsettings)) {
@@ -174,12 +175,16 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
 
         $plagiarismfile = $DB->get_record('turnitin_files',
                 array('cm' => $cmid, 'userid' => $userid, 'identifier' => $filehash));
-        if (empty($plagiarismfile)) {
-            // No record of that submission - so no links can be returned
-            return false;
-        }
         $results = array();
-        if(isset($plagiarismfile->statuscode) && $plagiarismfile->statuscode != 'success') {
+        if (empty($plagiarismfile) ||
+            (isset($plagiarismfile->statuscode) && $plagiarismfile->statuscode == 'pending')) {
+            // No record of that submission - so no links can be returned. Assume cron has not run and
+            // Mark it as queued
+            $message = get_string('queued', 'plagiarism_turnitin');
+            $results['error'] = $OUTPUT->notification($message, 'notifysuccess');
+            return $results;
+        }
+        if (isset($plagiarismfile->statuscode) && $plagiarismfile->statuscode != 'success') {
             //always display errors - even if the student isn't able to see report/score.
             $results['error'] = turnitin_error_text($plagiarismfile->statuscode);
             return $results;
@@ -457,8 +462,8 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
             // we'll get a 1001 error
             $assignmentstarttime = $DB->get_field('turnitin_config', 'value', array('cm' => $cm->id,
                                                                                     'name' => 'turnitin_dtsart'));
-            if (strtotime('+5 minutes', $assignmentstarttime) < time()) {
-                // Probably not set up properly - we need to allow for wonky server clocks.
+            if ($assignmentstarttime < time()) {
+                // May not be set up properly - we need to allow for wonky server clocks.
                 return $result;
             }
 
@@ -1014,7 +1019,10 @@ function turnitin_error_text($statuscode, $notify=true) {
     $return = '';
     $statuscode = (int) $statuscode;
     if (!empty($statuscode)) {
-        if ($statuscode < 100) { //don't return an error state for codes 0-99
+        if ($statuscode == 51) {
+            // Let them know if it's being processes right now
+            return $OUTPUT->notification(get_string('beingprocessed', 'plagiarism_turnitin'), 'notifysuccess');
+        } else if ($statuscode < 100) { //don't return an error state for codes 0-99
             return '';
         } else if (($statuscode > 1006 && $statuscode < 1014) or ($statuscode > 1022 && $statuscode < 1025) or $statuscode == 1020) { //these are general errors that a could be useful to students.
             $return = get_string('tiierror'.$statuscode, 'plagiarism_turnitin');
