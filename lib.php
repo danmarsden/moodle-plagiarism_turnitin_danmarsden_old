@@ -462,10 +462,7 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
             // we'll get a 1001 error
             $assignmentstarttime = $DB->get_field('turnitin_config', 'value', array('cm' => $cm->id,
                                                                                     'name' => 'turnitin_dtstart'));
-            if (!$assignmentstarttime) {
-                // Older assignments won't have this set up yet
-            }
-            if ($assignmentstarttime < time()) {
+            if ($assignmentstarttime > time()) {
                 // May not be set up properly - we need to allow for wonky server clocks.
                 return $result;
             }
