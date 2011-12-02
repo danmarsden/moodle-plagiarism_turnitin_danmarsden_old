@@ -469,7 +469,7 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
             if (empty($eventdata->files)) {
                 // There are no files attached to this 'fileuploaded' event.
                 // This is a 'finalize' event - assignment-focused functionality
-                trace("finalise");
+                mtrace("finalise");
                 if (isset($plagiarismvalues['plagiarism_draft_submit'])
                         && $plagiarismvalues['plagiarism_draft_submit'] == PLAGIARISM_TII_DRAFTSUBMIT_FINAL) {
                     // Drafts haven't previously been sent
