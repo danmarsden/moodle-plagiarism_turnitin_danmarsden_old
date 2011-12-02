@@ -857,7 +857,7 @@ function turnitin_send_file($pid, $plagiarismsettings, $file) {
         return true;
     }
     $dtstart = $DB->get_record('turnitin_config', array('cm' => $cm->id, 'name' => 'turnitin_dtstart'));
-    if (!empty($dtstart) && $dtstart->value+600 > time()) {
+    if (!empty($dtstart) && $dtstart->value > time()) {
         mtrace("Warning: assignment start date is too early ".date('Y-m-d H:i:s', $dtstart->value)." in course $course->shortname assignment $module->name will delay sending files until next cron");
         return false; //TODO: check that this doesn't cause a failure in cron
     }
