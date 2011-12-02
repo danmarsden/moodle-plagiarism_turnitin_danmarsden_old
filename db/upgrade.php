@@ -135,6 +135,25 @@ function xmldb_plagiarism_turnitin_upgrade($oldversion) {
 
     }
 
+    if ($oldversion < 2011111001) {
+        // All assignments need to have a start time
+
+        $existingassignments = $DB->get_records_sql('turnitin_config', array('name' => 'turnitin_assignid'));
+
+        foreach ($existingassignments as $assignment) {
+            $setting = new stdClass();
+            $setting->cm = $assignment->cm;
+            $setting->name = 'turnitin_dtstart';
+            // Doesn't matter that this is not the same as the actual turnitin start date. It just needs to be
+            // ahead of the actual one and in the past relative to any future submitted files.
+            $setting->value = time();
+            $DB->insert_record('turnitin_config', $setting);
+        }
+
+        upgrade_plugin_savepoint(true, 2011111001, 'plagiarism', 'turnitin');
+
+    }
+
 
     return true;
 }

@@ -461,7 +461,10 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
             // If the assignment has only just been set up, we don't want to try to submit to it, or
             // we'll get a 1001 error
             $assignmentstarttime = $DB->get_field('turnitin_config', 'value', array('cm' => $cm->id,
-                                                                                    'name' => 'turnitin_dtsart'));
+                                                                                    'name' => 'turnitin_dtstart'));
+            if (!$assignmentstarttime) {
+                // Older assignments won't have this set up yet
+            }
             if ($assignmentstarttime < time()) {
                 // May not be set up properly - we need to allow for wonky server clocks.
                 return $result;
@@ -1137,7 +1140,7 @@ function turnitin_update_assignment($plagiarismsettings, $plagiarismvalues, $eve
                 $tii['assignid'] = $plagiarismvalues['turnitin_assignid'];
                 $tii['fcmd'] = TURNITIN_UPDATE_RETURN_XML;
                 $tii['dtstart']  = $DB->get_field('turnitin_config', 'value', array('cm' => $cm->id,
-                                                                                    'name' => 'turnitin_dtsart'));
+                                                                                    'name' => 'turnitin_dtstart'));
                 if (empty($module->timedue)) {
                     $tii['dtdue'] = rawurlencode(date($tunitindateformat, strtotime('+1 year')));
                 } else {
