@@ -347,7 +347,23 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
             }
             $existingcourses[] = $course->id;
             $newcoursecache =  implode(',',$existingcourses);
-            $DB->set_field('user_info_data','data', $newcoursecache,array('userid'=>$USER->id, 'fieldid'=>$userprofilefieldid));
+            //check if field exists and insert/set
+            $sql = 'SELECT uid.id ' .
+                   ' FROM {user_info_field} uif ' .
+                   ' INNER JOIN {user_info_data} uid ON uid.fieldid = uif.id ' .
+                   ' WHERE uif.shortname = ? ' .
+                   ' AND uid.userid = ? ';
+            if (empty($USER->profile[$userprofilefieldname]) && !$DB->record_exists_sql($sql, array($userprofilefieldname, $USER->id))) { //record might not exist
+                // New field - will need to insert a new record.
+                $userdata = new stdclass();
+                $userdata->userid = $USER->id;
+                $userdata->fieldid = $userprofilefieldid;
+                $userdata->data = $newcoursecache;
+                $DB->insert_record('user_info_data', $userdata);
+            } else {
+                $DB->set_field('user_info_data','data', $newcoursecache,array('userid'=>$USER->id, 'fieldid'=>$userprofilefieldid));
+            }
+
             $USER->profile[$userprofilefieldname] = $newcoursecache;
         }
 
