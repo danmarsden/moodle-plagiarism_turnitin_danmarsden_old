@@ -328,10 +328,35 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
             return;
         }
 
-        //first check coursecache user info field to see if this user is already a member of the Turnitin course.
-        if (empty($USER->profile[$userprofilefieldname]) || !in_array($course->id, explode(',',$USER->profile[$userprofilefieldname]))) {
-            $existingcourses = explode(',',$USER->profile[$userprofilefieldname]);
-            $userprofilefieldid = $DB->get_field('user_info_field', 'id', array('shortname'=>$userprofilefieldname));
+        // If Turinitin has already been told about this user's rights in this course,
+        // the courseid will exist in a comma separated listed in a hidden profile field.
+        // Thus stored so that we don't repeatedly advise turnitin, and site admins can clear the cache if so desired.
+        if (!isset($USER->profile)) {
+            // User has had a partial login - possibly over web services.
+            // Check for profile details directly in DB:
+            $sql = 'SELECT uid.id, uid,data ' .
+                    'FROM {user_info_field} uif ' .
+                    ' INNER JOIN {user_info_data} uid ON uid.fieldid = uif.id ' .
+                    'WHERE uif.shortname = ? '.
+                    ' AND uid.userid = ? ';
+            $userprofiledetail = $DB->get_record_sql($sql, array($userprofilefieldname, $USER->id));
+            if (!empty($userprofiledetail)) {
+                $existingcourses = explode(',', $userprofiledetail->data);
+                $newrecord = false;
+            } else {
+                $existingcourses = array();
+                $newrecord = true;
+            }
+        } else if (!empty($USER->profile[$userprofilefieldname])) {
+            $existingcourses = explode(',', $USER->profile[$userprofilefieldname]);
+            $newrecord = false;
+        } else {
+            $existingcourses = array();
+            $newrecord = true;
+        }
+
+        if (!in_array($course->id, $existingcourses)) {
+            // Turnititin doesn't (yet) know that this user is a teacher in this course.  Tell them:
             $tii = array();
             $tii['utp']      = TURNITIN_INSTRUCTOR;
             $tii = turnitin_get_tii_user($tii, $USER);
@@ -347,13 +372,9 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
             }
             $existingcourses[] = $course->id;
             $newcoursecache =  implode(',',$existingcourses);
-            //check if field exists and insert/set
-            $sql = 'SELECT uid.id ' .
-                   ' FROM {user_info_field} uif ' .
-                   ' INNER JOIN {user_info_data} uid ON uid.fieldid = uif.id ' .
-                   ' WHERE uif.shortname = ? ' .
-                   ' AND uid.userid = ? ';
-            if (empty($USER->profile[$userprofilefieldname]) && !$DB->record_exists_sql($sql, array($userprofilefieldname, $USER->id))) { //record might not exist
+            // Now update our record of what teacherships TII knows about:
+            $userprofilefieldid = $DB->get_field('user_info_field', 'id', array('shortname'=>$userprofilefieldname));
+            if ($newrecord) {
                 // New field - will need to insert a new record.
                 $userdata = new stdclass();
                 $userdata->userid = $USER->id;
