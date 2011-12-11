@@ -332,6 +332,7 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
         // If Turinitin has already been told about this user's rights in this course,
         // the courseid will exist in a comma separated listed in a hidden profile field.
         // Thus stored so that we don't repeatedly advise turnitin, and site admins can clear the cache if so desired.
+        $newrecord = null;
         if (!isset($USER->profile)) {
             // User has had a partial login - possibly over web services.
             // Check for profile details directly in DB:
@@ -353,7 +354,16 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
             $newrecord = false;
         } else {
             $existingcourses = array();
-            $newrecord = true;
+            $sql = 'SELECT uid.id ' .
+                   ' FROM {user_info_field} uif ' .
+                   ' INNER JOIN {user_info_data} uid ON uid.fieldid = uif.id ' .
+                   ' WHERE uif.shortname = ? ' .
+                   ' AND uid.userid = ? ';
+            if (!$DB->record_exists_sql($sql, array($userprofilefieldname, $USER->id))) {
+                $newrecord = true;
+            } else {
+                $newrecord = false;
+            }
         }
 
         if (!in_array($course->id, $existingcourses)) {
