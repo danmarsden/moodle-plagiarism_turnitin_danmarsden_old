@@ -135,6 +135,37 @@ function xmldb_plagiarism_turnitin_upgrade($oldversion) {
             $DB->insert_record('user_info_field', $newfield);
         }
     }
+    if ($oldversion < 2011121200) {
+        // All assignments need to have a start time
+
+        $existingassignments = $DB->get_records('turnitin_config', array('name' => 'turnitin_assignid'));
+
+        foreach ($existingassignments as $assignment) {
+            $setting = new stdClass();
+            $setting->cm = $assignment->cm;
+            $setting->name = 'turnitin_dtstart';
+
+            $coursemodule = $DB->get_record('course_modules', array('id' => $assignment->cm));
+            $module = false;
+            if ($coursemodule) {
+                $modulename = $DB->get_field('modules', 'name', array('id' => $coursemodule->module));
+                $module = $DB->get_record($modulename, array('id' => $coursemodule->instance));
+            }
+            if (!empty($module->timeavailable)) {
+                $setting->value = $module->timeavailable;
+            } else if (!empty($module->timecreated)) {
+                $setting->value = $module->timecreated;
+            } else {
+                // Doesn't matter hugely that this is not the same as the actual turnitin start date. It just needs
+                // to be ahead of the actual one and in the past relative to any future submitted files.
+                $setting->value = time();
+            }
+            $DB->insert_record('turnitin_config', $setting);
+        }
+
+        upgrade_plugin_savepoint(true, 2011121200, 'plagiarism', 'turnitin');
+
+    }
 
     return true;
 }

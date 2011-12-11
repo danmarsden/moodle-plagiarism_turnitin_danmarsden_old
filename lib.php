@@ -92,6 +92,7 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
         $file = $linkarray['file'];
         $results = $this->get_file_results($cmid, $userid, $file);
         if (empty($results)) {
+            // Cron has not run yet
             return '<br />';
         }
 
@@ -127,11 +128,11 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
     * Get the information turnitin has about a file
     * @param int $cmid the id of the coursemodule file was submitted for
     * @param int $userid the id of the user who submitted the file
-    * @param object $file file object describing a moodle file which was submited to TII
+    * @param stored_file $file file object describing a moodle file which was submited to TII
     * @return mixed - false if no info available, or an array describing what's known about the TII submission
     */
-    public function get_file_results($cmid, $userid, $file) {
-        global $DB, $USER, $COURSE, $CFG;
+    public function get_file_results($cmid, $userid, stored_file $file) {
+        global $DB, $USER, $COURSE, $OUTPUT;
 
         $plagiarismsettings = $this->get_settings();
         if (empty($plagiarismsettings)) {
@@ -189,7 +190,7 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
                 'score' => '',
                 'reporturl' => '',
                 );
-        if(isset($plagiarismfile->statuscode) && $plagiarismfile->statuscode != 'success') {
+        if (isset($plagiarismfile->statuscode) && $plagiarismfile->statuscode != 'success') {
             //always display errors - even if the student isn't able to see report/score.
             $results['error'] = turnitin_error_text($plagiarismfile->statuscode);
             return $results;
@@ -474,8 +475,19 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
            return  turnitin_update_assignment($plagiarismsettings, $plagiarismvalues, $eventdata, 'delete');
         } else if ($eventdata->eventtype=="file_uploaded") {
             // check if the module associated with this event still exists
-            if (!$DB->record_exists('course_modules', array('id' => $eventdata->cmid))) {
+            $cm = $DB->get_record('course_modules', array('id' => $eventdata->cmid));
+            if (!$cm) {
                 return true;
+            }
+
+            // If the assignment has only just been set up, we don't want to try to submit to it, or
+            // we'll get a 1001 error
+            $assignmentstarttime = $DB->get_field('turnitin_config', 'value', array('cm' => $cm->id,
+                                                                                    'name' => 'turnitin_dtstart'));
+            if ($assignmentstarttime > time()) {
+                // May not be set up properly - we need to allow for wonky server clocks.
+                mtrace("Warning: assignment start time is too early ".date('Y-m-d H:i:s', $assignmentstarttime)." cmid:". $eventdata->cmid." will delay sending files until next cron");
+                return false;
             }
 
             if (!empty($eventdata->file) && empty($eventdata->files)) { //single assignment type passes a single file
@@ -883,7 +895,7 @@ function turnitin_send_file($pid, $plagiarismsettings, $file) {
         return true;
     }
     $dtstart = $DB->get_record('turnitin_config', array('cm' => $cm->id, 'name' => 'turnitin_dtstart'));
-    if (!empty($dtstart) && $dtstart->value+600 > time()) {
+    if (!empty($dtstart) && $dtstart->value > time()) {
         mtrace("Warning: assignment start date is too early ".date('Y-m-d H:i:s', $dtstart->value)." in course $course->shortname assignment $module->name will delay sending files until next cron");
         return false; //TODO: check that this doesn't cause a failure in cron
     }
@@ -1048,7 +1060,10 @@ function turnitin_error_text($statuscode, $notify=true) {
     $return = '';
     $statuscode = (int) $statuscode;
     if (!empty($statuscode)) {
-        if ($statuscode < 100) { //don't return an error state for codes 0-99
+        if ($statuscode == 51) {
+            // Let them know if it's being processes right now
+            return $OUTPUT->notification(get_string('beingprocessed', 'plagiarism_turnitin'), 'notifysuccess');
+        } else if ($statuscode < 100) { //don't return an error state for codes 0-99
             return '';
         } else if (($statuscode > 1006 && $statuscode < 1014) or ($statuscode > 1022 && $statuscode < 1025) or $statuscode == 1020) { //these are general errors that a could be useful to students.
             $return = get_string('tiierror'.$statuscode, 'plagiarism_turnitin');
@@ -1141,25 +1156,33 @@ function turnitin_update_assignment($plagiarismsettings, $plagiarismvalues, $eve
             }
             //now create Assignment in Class
             //first check if this assignment has already been created
+            $tunitindateformat = 'Y-m-d H:i:s';
             if (empty($plagiarismvalues['turnitin_assignid'])) {
                 $tii['assignid']   = "a_".time().rand(10,5000); //some unique random id only used once.
                 $tii['fcmd'] = TURNITIN_RETURN_XML;
-                // New assignments cannout have a start date/time in the past (as judged by TII servers)
+                // New assignments cannot have a start date/time in the past (as judged by TII servers)
                 // add an hour to account for possibility of our clock being fast, or TII clock being slow.
-                $tii['dtstart'] = rawurlencode(date('Y-m-d H:i:s', time()+60*60));
-                $tii['dtdue'] = rawurlencode(date('Y-m-d H:i:s', time()+(365 * 24 * 60 * 60)));
+                $timestamp = strtotime('+10 minutes');
+                $tii['dtstart'] = rawurlencode(date($tunitindateformat, $timestamp));
+                // Store the start time. We can't make it instant in case Turnitin is flaky and
+                // thinks we are trying to start in the past. Don't want to submit file till it is
+                // definitely in the past though.
+                $timestartconfig = new stdClass();
+                $timestartconfig->cm = $cm->id;
+                $timestartconfig->name = 'turnitin_dtstart';
+                $timestartconfig->value = $timestamp;
+                $DB->insert_record('turnitin_config', $timestartconfig);
+
+                $tii['dtdue'] = rawurlencode(date($tunitindateformat, strtotime('+1 year')));
             } else {
                 $tii['assignid'] = $plagiarismvalues['turnitin_assignid'];
                 $tii['fcmd'] = TURNITIN_UPDATE_RETURN_XML;
-                if (empty($module->timeavailable)) {
-                    $tii['dtstart'] = rawurlencode(date('Y-m-d H:i:s', time()));
-                } else {
-                    $tii['dtstart']  = rawurlencode(date('Y-m-d H:i:s', $module->timeavailable));
-                }
+                $tii['dtstart']  = $DB->get_field('turnitin_config', 'value', array('cm' => $cm->id,
+                                                                                    'name' => 'turnitin_dtstart'));
                 if (empty($module->timedue)) {
-                    $tii['dtdue'] = rawurlencode(date('Y-m-d H:i:s', time()+(365 * 24 * 60 * 60)));
+                    $tii['dtdue'] = rawurlencode(date($tunitindateformat, strtotime('+1 year')));
                 } else {
-                    $tii['dtdue']    = rawurlencode(date('Y-m-d H:i:s', $module->timedue));
+                    $tii['dtdue']    = rawurlencode(date($tunitindateformat, $module->timedue));
                 }
             }
             $tii['assign']   = turnitin_get_assign_name($module->name, $cm->id); //assignment name stored in TII
@@ -1216,10 +1239,10 @@ function turnitin_update_assignment($plagiarismsettings, $plagiarismvalues, $eve
                     $tii['assignid'] = $tiixml->assignmentid[0];
                     $tii['fcmd'] = TURNITIN_UPDATE_RETURN_XML;
                     if (!empty($module->timeavailable)) {
-                        $tii['dtstart']  = rawurlencode(date('Y-m-d H:i:s', $module->timeavailable));
+                        $tii['dtstart']  = rawurlencode(date($tunitindateformat, $module->timeavailable));
                     }
                     if (!empty($module->timedue)) {
-                        $tii['dtdue']    = rawurlencode(date('Y-m-d H:i:s', $module->timedue));
+                        $tii['dtdue']    = rawurlencode(date($tunitindateformat, $module->timedue));
                     }
                 }
                 $tiixml = turnitin_post_data($tii, $plagiarismsettings);
