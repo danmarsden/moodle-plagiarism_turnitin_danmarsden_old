@@ -49,12 +49,12 @@ require_once('turnitin_tabs.php');
 echo $OUTPUT->box(get_string('tiiexplainerrors','plagiarism_turnitin'));
 $sqlallfiles = "SELECT t.*, u.firstname, u.lastname, m.name as moduletype, ".
                "cm.course as courseid, cm.instance as cminstance FROM ".
-               "{turnitin_files} t, {user} u, {modules} m, {course_modules} cm ".
+               "{plagiarism_turnitin_files} t, {user} u, {modules} m, {course_modules} cm ".
                "WHERE m.id=cm.module AND cm.id=t.cm AND t.userid=u.id ".
                "AND t.statuscode <>'success' AND t.statuscode <>'pending' AND t.statuscode <> '51'";
-$sqlcount =  "SELECT COUNT(id) FROM {turnitin_files} WHERE statuscode <>'success' AND statuscode <>'pending' AND statuscode <> '51'";
+$sqlcount =  "SELECT COUNT(id) FROM {plagiarism_turnitin_files} WHERE statuscode <>'success' AND statuscode <>'pending' AND statuscode <> '51'";
 if ($resetuser==1 && $id) {
-    $sqlid = "SELECT t.*, u.firstname, u.lastname, u.id as userid, m.name as moduletype, cm.course as courseid, cm.instance as cminstance FROM {turnitin_files} t, {user} u, {modules} m, {course_modules} cm WHERE m.id=cm.module AND cm.id=t.cm AND t.userid=u.id AND t.id = ?";
+    $sqlid = "SELECT t.*, u.firstname, u.lastname, u.id as userid, m.name as moduletype, cm.course as courseid, cm.instance as cminstance FROM {plagiarism_turnitin_files} t, {user} u, {modules} m, {course_modules} cm WHERE m.id=cm.module AND cm.id=t.cm AND t.userid=u.id AND t.id = ?";
     $tfile = $DB->get_record_sql($sqlid, array('id'=>$id));
     $tfile->statuscode = 'pending';
     $modulecontext = get_context_instance(CONTEXT_MODULE, $tfile->cm);
@@ -72,7 +72,7 @@ if ($resetuser==1 && $id) {
 
              events_trigger('assessable_file_uploaded', $eventdata);
              //now reset status so that it disapears from error page
-             if ($DB->update_record('turnitin_files', $tfile)) {
+             if ($DB->update_record('plagiarism_turnitin_files', $tfile)) {
                  notify(get_string('fileresubmitted','plagiarism_turnitin'));
              }
          } else {
@@ -88,13 +88,13 @@ if ($resetuser==1 && $id) {
     foreach($tiifiles as $tiifile) {
         $tiifile->statuscode = 'pending';
         //TODO: trigger event for this file
-       // if ($DB->update_record('turnitin_files', $tiifile)) {
+       // if ($DB->update_record('plagiarism_turnitin_files', $tiifile)) {
          //   notify(get_string('fileresubmitted','plagiarism_turnitin'));
         //}
     }
  }
 if (!empty($delete)) {
-    $DB->delete_records('turnitin_files', array('id'=>$id));
+    $DB->delete_records('plagiarism_turnitin_files', array('id'=>$id));
     notify(get_string('filedeleted','plagiarism_turnitin'));
 
 }

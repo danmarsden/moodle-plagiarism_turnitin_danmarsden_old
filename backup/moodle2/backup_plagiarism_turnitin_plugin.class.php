@@ -21,7 +21,7 @@ class backup_plagiarism_turnitin_plugin extends backup_plagiarism_plugin {
         $turnitinconfig = new backup_nested_element('turnitin_config', array('id'), array('name', 'value'));
         $pluginwrapper->add_child($turnitinconfigs);
         $turnitinconfigs->add_child($turnitinconfig);
-        $turnitinconfig->set_source_table('turnitin_config', array('cm' => backup::VAR_PARENTID));
+        $turnitinconfig->set_source_table('plagiarism_turnitin_config', array('cm' => backup::VAR_PARENTID));
 
         //now information about files to module
         $turnitinfiles = new backup_nested_element('turnitin_files');
@@ -31,7 +31,7 @@ class backup_plagiarism_turnitin_plugin extends backup_plagiarism_plugin {
         $pluginwrapper->add_child($turnitinfiles);
         $turnitinfiles->add_child($turnitinfile);
         if ($userinfo) {
-            $turnitinfile->set_source_table('turnitin_files', array('cm' => backup::VAR_PARENTID));
+            $turnitinfile->set_source_table('plagiarism_turnitin_files', array('cm' => backup::VAR_PARENTID));
         }
         return $plugin;
     }

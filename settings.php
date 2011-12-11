@@ -112,7 +112,7 @@
                 $newpg->cm = $pg->cm;
                 $newpg->name = $pg->name;
                 $newpg->value - $pg->value;
-                $DB->insert_record('turnitin_config', $newpg);
+                $DB->insert_record('plagiarism_turnitin_config', $newpg);
             }
         }
         $dbman->drop_table($table2);
@@ -146,7 +146,7 @@
                         }
                     }
                     if (!empty($newf->identifier)) {
-                        $DB->insert_record('turnitin_files', $tf);
+                        $DB->insert_record('plagiarism_turnitin_files', $tf);
                     }
                 }
             }

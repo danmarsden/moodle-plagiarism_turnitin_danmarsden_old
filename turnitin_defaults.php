@@ -39,7 +39,7 @@
     $page = optional_param('page', 0, PARAM_INT);
 
     $mform = new turnitin_defaults_form(null);
-    $plagiarismdefaults = $DB->get_records_menu('turnitin_config', array('cm'=>0),'','name,value'); //cmid(0) is the default list.
+    $plagiarismdefaults = $DB->get_records_menu('plagiarism_turnitin_config', array('cm'=>0),'','name,value'); //cmid(0) is the default list.
     if (!empty($plagiarismdefaults)) {
         $mform->set_data($plagiarismdefaults);
     }
@@ -57,10 +57,10 @@
                 $newelement->name = $element;
                 $newelement->value = $data->$element;
                 if (isset($plagiarismdefaults[$element])) { //update
-                    $newelement->id = $DB->get_field('turnitin_config', 'id', (array('cm'=>0, 'name'=>$element)));
-                    $DB->update_record('turnitin_config', $newelement);
+                    $newelement->id = $DB->get_field('plagiarism_turnitin_config', 'id', (array('cm'=>0, 'name'=>$element)));
+                    $DB->update_record('plagiarism_turnitin_config', $newelement);
                 } else { //insert
-                    $DB->insert_record('turnitin_config', $newelement);
+                    $DB->insert_record('plagiarism_turnitin_config', $newelement);
                 }
             }
         }

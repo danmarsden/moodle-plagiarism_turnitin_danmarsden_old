@@ -65,14 +65,14 @@ class restore_plagiarism_turnitin_plugin extends restore_plagiarism_plugin {
                 $data = (object) $data;
             }
             if ($data->name == 'turnitin_assignid') { //check if this assignid already exists
-                $recexists = $DB->record_exists('turnitin_config', array('name'=>'turnitin_assignid', 'value' => $data->value));
+                $recexists = $DB->record_exists('plagiarism_turnitin_config', array('name'=>'turnitin_assignid', 'value' => $data->value));
             }
             if (!$recexists) {
                 $data = (object)$data;
                 $oldid = $data->id;
                 $data->cm = $this->task->get_moduleid();
 
-                $DB->insert_record('turnitin_config', $data);
+                $DB->insert_record('plagiarism_turnitin_config', $data);
             }
         }
     }
@@ -84,14 +84,14 @@ class restore_plagiarism_turnitin_plugin extends restore_plagiarism_plugin {
             $data = (object)$data;
             $recexists = false;
             if (!empty($data->externalid)) {
-                $recexists = $DB->record_exists('turnitin_files', array('externalid'=>$data->externalid));
+                $recexists = $DB->record_exists('plagiarism_turnitin_files', array('externalid'=>$data->externalid));
             }
             if (!$recexists) { //only restore this record if one doesn't exist for this externalid.
                 $oldid = $data->id;
                 $data->cm = $this->task->get_moduleid();
                 $data->userid = $this->get_mappingid('user', $data->userid);
 
-                $DB->insert_record('turnitin_files', $data);
+                $DB->insert_record('plagiarism_turnitin_files', $data);
             }
         }
     }

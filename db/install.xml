@@ -4,7 +4,7 @@
     xsi:noNamespaceSchemaLocation="../../../lib/xmldb/xmldb.xsd"
 >
   <TABLES>
-    <TABLE NAME="turnitin_files" COMMENT="info about submitted files" NEXT="turnitin_config">
+    <TABLE NAME="plagiarism_turnitin_files" COMMENT="info about submitted files" NEXT="plagiarism_turnitin_config">
       <FIELDS>
         <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" UNSIGNED="true" SEQUENCE="true" NEXT="cm"/>
         <FIELD NAME="cm" TYPE="int" LENGTH="10" NOTNULL="true" UNSIGNED="true" DEFAULT="0" SEQUENCE="false" PREVIOUS="id" NEXT="userid"/>
@@ -23,7 +23,7 @@
         <KEY NAME="userid" TYPE="foreign" FIELDS="userid" REFTABLE="user" REFFIELDS="id" PREVIOUS="cm"/>
       </KEYS>
     </TABLE>
-    <TABLE NAME="turnitin_config" COMMENT="info about submitted files" PREVIOUS="turnitin_files">
+    <TABLE NAME="plagiarism_turnitin_config" COMMENT="info about submitted files" PREVIOUS="plagiarism_turnitin_files">
       <FIELDS>
         <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" UNSIGNED="true" SEQUENCE="true" NEXT="cm"/>
         <FIELD NAME="cm" TYPE="int" LENGTH="10" NOTNULL="true" UNSIGNED="true" DEFAULT="0" SEQUENCE="false" PREVIOUS="id" NEXT="name"/>

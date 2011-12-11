@@ -166,6 +166,19 @@ function xmldb_plagiarism_turnitin_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2011121200, 'plagiarism', 'turnitin');
 
     }
+    if ($oldversion < 2011121201) {
+        $table = new xmldb_table('turnitin_files');
+        if ($dbman->table_exists($table)) {
+            $dbman->rename_table($table, 'plagiarism_turnitin_files');
+        }
+
+        $table = new xmldb_table('turnitin_config');
+        if ($dbman->table_exists($table)) {
+            $dbman->rename_table($table, 'plagiarism_turnitin_config');
+        }
+
+        upgrade_plugin_savepoint(true, 2011121201, 'plagiarism', 'turnitin');
+    }
 
     return true;
 }
