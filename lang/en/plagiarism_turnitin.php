@@ -106,6 +106,7 @@ $string['resubmit'] = 'Resubmit';
 $string['fileresubmitted'] = 'File Queued for resubmission';
 $string['filedeleted'] = 'File deleted from queue';
 $string['module'] = 'Module';
+$string['id'] = 'ID';
 $string['name'] = 'Name';
 $string['file'] = 'File';
 $string['status'] = 'Status';

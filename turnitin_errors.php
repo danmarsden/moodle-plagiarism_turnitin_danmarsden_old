@@ -107,6 +107,8 @@ if (!empty($sort)) {
         $orderby = " ORDER BY cm.id";
     } elseif ($sort=="status") {
         $orderby = " ORDER BY t.statuscode";
+    } elseif ($sort=="id") {
+        $orderby = " ORDER BY t.id";
     }
     if (!empty($orderby) && ($dir=='asc' || $dir=='desc')) {
         $orderby .= " ".$dir;
@@ -119,7 +121,7 @@ $turnitin_files = $DB->get_records_sql($sqlallfiles.$orderby, null, $page*$limit
 
 
 $table = new html_table();
-$columns = array('name', 'module', 'file', 'status');
+$columns = array('id', 'name', 'module', 'file', 'status');
 foreach ($columns as $column) {
     $strtitle = get_string($column, 'plagiarism_turnitin');
     if ($column=='file') {
@@ -141,19 +143,25 @@ $table->head[] = '';
 $table->width = "95%";
 $fs = get_file_storage();
 foreach ($turnitin_files as $tf) {
+    $modulecontext = get_context_instance(CONTEXT_MODULE, $tf->cm); 
+    $coursemodule = get_coursemodule_from_id($tf->moduletype, $tf->cm);
     $file = $fs->get_file_by_hash($tf->identifier);
     if ($file) {
-        $filelink = '<a href="'.$CFG->wwwroot.'/files/">'.$file->get_filename()."</a>";
-        $url = file_encode_url("$CFG->wwwroot/pluginfile.php", '/'.$modulecontext->id.'/mod_assignment/submission/'.$file->get_itemid(). $file->get_filepath().$file->get_filename(), true);
-        $filelink = html_writer::link($url, $file->get_filename());
+        $fileurl = file_encode_url("$CFG->wwwroot/pluginfile.php", '/'.$modulecontext->id.'/mod_assignment/submission/'.$file->get_itemid(). $file->get_filepath().$file->get_filename(), true);
+        $filelink = html_writer::link($fileurl, shorten_text($file->get_filename(), 40, true), array('title'=>$file->get_filename()));
+    } else {
+        $filelink = $tf->identifier;
     }
 
     $user = "<a href='".$CFG->wwwroot."/user/profile.php?id=".$tf->userid."'>".fullname($tf)."</a>";
 
     $reset = '<a href="turnitin_errors.php?reset=1&id='.$tf->id.'">'.get_string('resubmit','plagiarism_turnitin').'</a> | '.
              '<a href="turnitin_errors.php?delete=1&id='.$tf->id.'">'.get_string('delete').'</a>';
-    $cmlink = '<a href="'.$CFG->wwwroot.'/'.$tf->moduletype.'/view.php?id='.$tf->cm.'">'.get_string('module', 'plagiarism_turnitin').'</a>';
-    $table->data[] = array ($user,
+    //$cmlink = '<a href="'.$CFG->wwwroot.'/mod/'.$tf->moduletype.'/view.php?id='.$tf->cm.'">'.$coursemodule->name.'</a>';
+    $cmurl = new moodle_url($CFG->wwwroot.'/mod/'.$tf->moduletype.'/view.php',array('id'=>$tf->cm));
+    $cmlink = html_writer::link($cmurl, shorten_text($coursemodule->name, 40, true), array('title'=>$coursemodule->name));
+    $table->data[] = array ($tf->id,
+                            $user,
                             $cmlink,
                             $filelink,
                             $tf->statuscode,
