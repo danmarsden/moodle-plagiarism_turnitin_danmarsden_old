@@ -1201,7 +1201,7 @@ function turnitin_update_assignment($plagiarismsettings, $plagiarismvalues, $eve
                 $timestartconfig = new stdClass();
                 $timestartconfig->cm = $cm->id;
                 $timestartconfig->name = 'turnitin_dtstart';
-                $timestartconfig->value = $timestamp;
+                $timestartconfig->value = $tii['dtstart'];
                 $DB->insert_record('plagiarism_turnitin_config', $timestartconfig);
 
                 $tii['dtdue'] = rawurlencode(date($tunitindateformat, strtotime('+1 year')));
