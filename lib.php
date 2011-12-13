@@ -1191,17 +1191,17 @@ function turnitin_update_assignment($plagiarismsettings, $plagiarismvalues, $eve
             if (empty($plagiarismvalues['turnitin_assignid'])) {
                 $tii['assignid']   = "a_".time().rand(10,5000); //some unique random id only used once.
                 $tii['fcmd'] = TURNITIN_RETURN_XML;
-                // New assignments cannot have a start date/time in the past (as judged by TII servers)
-                // add an hour to account for possibility of our clock being fast, or TII clock being slow.
+                // TII API rules mean that new assignments cannot have a start date/time in the past
+                // (as judged by TII servers). Add some time to account for possibility of our
+                // clock being fast, or TII clock being slow.
+                // We'll set the assignment start time properly after the assignment has been
+                // created, (the API rules are less restrictive for updates).
                 $timestamp = strtotime('+10 minutes');
                 $tii['dtstart'] = rawurlencode(date($tunitindateformat, $timestamp));
-                // Store the start time. We can't make it instant in case Turnitin is flaky and
-                // thinks we are trying to start in the past. Don't want to submit file till it is
-                // definitely in the past though.
                 $timestartconfig = new stdClass();
                 $timestartconfig->cm = $cm->id;
                 $timestartconfig->name = 'turnitin_dtstart';
-                $timestartconfig->value = $timestamp;
+                $timestartconfig->value = $tii['dtstart'];
                 $DB->insert_record('plagiarism_turnitin_config', $timestartconfig);
 
                 $tii['dtdue'] = rawurlencode(date($tunitindateformat, strtotime('+1 year')));
@@ -1266,7 +1266,7 @@ function turnitin_update_assignment($plagiarismsettings, $plagiarismvalues, $eve
                     }
                 }
                 if (!empty($module->timedue) or (!empty($module->timeavailable))) {
-                    //need to update time set in Turnitin.
+                    // Overwrite the faux time(s) we set when creating the TII assignment:
                     $tii['assignid'] = $tiixml->assignmentid[0];
                     $tii['fcmd'] = TURNITIN_UPDATE_RETURN_XML;
                     if (!empty($module->timeavailable)) {
