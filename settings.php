@@ -103,7 +103,10 @@
     $table = new xmldb_table('tii_files');
     $table2 = new xmldb_table('plagiarism_config');
     if ($dbman->table_exists($table) && $dbman->table_exists($table2)) {
-
+        /// increase script runtime
+        set_time_limit(0);
+        /// increase memory limit
+        raise_memory_limit(MEMORY_EXTRA);
         // do plagiarism_config table - easy as structure stays the same
         $plagiarism_config = $DB->get_records('plagiarism_config');
         if (!empty($plagiarism_config)) {
@@ -111,18 +114,18 @@
                 $newpg = new stdClass();
                 $newpg->cm = $pg->cm;
                 $newpg->name = $pg->name;
-                $newpg->value - $pg->value;
+                $newpg->value = $pg->value;
                 $DB->insert_record('plagiarism_turnitin_config', $newpg);
             }
         }
         $dbman->rename_table($table2, 'tii_config_legacy');
-
-
+        // get filesystem
+        $fs = get_file_storage();
         //now do tii_files table
         $tii_files = $DB->get_records('tii_files');
         if (!empty($tii_files)) {
             foreach ($tii_files as $tf) {
-                $newtf = new stdClass();
+                $newf = new stdClass();
                 $newf->userid = $tf->userid;
                 $newf->externalid = $tf->tii;
                 $newf->exernalstatus = 0;
@@ -139,15 +142,15 @@
                     //now get the pathnamehash for this old file
                     //first get all the files from the assignment module.
                     $modulecontext = get_context_instance(CONTEXT_MODULE, $cm->id);
-                    $submission = $DB->get_record('assignment_submissions', array('assignment'=>$this->instance, 'userid'=>$tf->userid));
-                    $files = $fs->get_area_files($modulecontext, 'mod_assignment', 'submission', $submission->id);
+                    $submission = $DB->get_record('assignment_submissions', array('assignment'=>$tf->instance, 'userid'=>$tf->userid));
+                    $files = $fs->get_area_files($modulecontext->id, 'mod_assignment', 'submission', $submission->id);
                     foreach ($files as $file) {
                         if ($file->get_filename()==$tf->filename) {
                             $newf->identifier = $file->get_pathnamehash();
                         }
                     }
                     if (!empty($newf->identifier)) {
-                        $DB->insert_record('plagiarism_turnitin_files', $tf);
+                        $DB->insert_record('plagiarism_turnitin_files', $newf);
                     }
                 }
             }
