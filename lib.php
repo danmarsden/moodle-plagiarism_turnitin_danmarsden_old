@@ -1319,7 +1319,7 @@ function turnitin_get_grademark_link($plagiarismfile, $course, $module, $plagiar
         //Grademark isn't available yet - don't provide link
         $output = '<img src="'.$OUTPUT->pix_url('i/grademark-grey').'">';
     } else {
-        $coursemodule = $DB->get_record('course_modules', array('id', $plagiarismfile->cm));
+        $coursemodule = $DB->get_record('course_modules', array('id' => $plagiarismfile->cm));
         $moduletype = $DB->get_field('modules', 'name', array('id' => $coursemodule->module));
         $tii = array();
         if (!has_capability("mod/$moduletype:grade", get_context_instance(CONTEXT_MODULE, $plagiarismfile->cm))) {
@@ -1417,7 +1417,7 @@ function turnitin_get_report_link($file, $course, $plagiarismsettings) {
     global $DB, $USER;
     $return = '';
 
-    $coursemodule = $DB->get_record('course_modules', array('id', $file->cm));
+    $coursemodule = $DB->get_record('course_modules', array('id' => $file->cm));
     $moduletype = $DB->get_field('modules', 'name', array('id' => $coursemodule->module));
 
     $tii = array();
