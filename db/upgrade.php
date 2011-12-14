@@ -180,5 +180,20 @@ function xmldb_plagiarism_turnitin_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2011121201, 'plagiarism', 'turnitin');
     }
 
+    if ($oldversion < 2011121400) {
+
+        // Define field legacyteacher to be added to plagiarism_turnitin_files
+        $table = new xmldb_table('plagiarism_turnitin_files');
+        $field = new xmldb_field('legacyteacher', XMLDB_TYPE_INTEGER, '1', XMLDB_UNSIGNED, XMLDB_NOTNULL, null, '0', 'apimd5');
+
+        // Conditionally launch add field legacyteacher
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+
+        // turnitin savepoint reached
+        upgrade_plugin_savepoint(true, 2011121400, 'plagiarism', 'turnitin');
+    }
+
     return true;
 }

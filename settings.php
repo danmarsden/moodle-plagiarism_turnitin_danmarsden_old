@@ -115,7 +115,7 @@
                 $DB->insert_record('plagiarism_turnitin_config', $newpg);
             }
         }
-        $dbman->drop_table($table2);
+        $dbman->rename_table($table2, 'tii_config_legacy');
 
 
         //now do tii_files table
@@ -128,6 +128,7 @@
                 $newf->exernalstatus = 0;
                 $newf->statuscode = $tf->tiicode;
                 $newf->similarityscore = $tf->tiiscore;
+                $newf->legacyteacher = 1;
 
                 //now get cm based on course and module
                 $cm = $DB->get_record('course_modules', array('course'=>$tf->course,
@@ -151,7 +152,7 @@
                 }
             }
         }
-        $dbman->drop_table($table);
+        $dbman->rename_table($table, 'tii_files_legacy');
     }
     //finished check for old tables..
 

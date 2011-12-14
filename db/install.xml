@@ -15,7 +15,8 @@
         <FIELD NAME="statuscode" TYPE="char" LENGTH="10" NOTNULL="false" SEQUENCE="false" PREVIOUS="externalstatus" NEXT="similarityscore"/>
         <FIELD NAME="similarityscore" TYPE="int" LENGTH="5" NOTNULL="true" UNSIGNED="true" DEFAULT="0" SEQUENCE="false" PREVIOUS="statuscode" NEXT="attempt"/>
         <FIELD NAME="attempt" TYPE="int" LENGTH="5" NOTNULL="true" UNSIGNED="true" DEFAULT="0" SEQUENCE="false" PREVIOUS="similarityscore" NEXT="apimd5"/>
-        <FIELD NAME="apimd5" TYPE="char" LENGTH="255" NOTNULL="false" SEQUENCE="false" COMMENT="This is the md5 used in the last api call to Turnitin" PREVIOUS="attempt"/>
+        <FIELD NAME="apimd5" TYPE="char" LENGTH="255" NOTNULL="false" SEQUENCE="false" COMMENT="This is the md5 used in the last api call to Turnitin" PREVIOUS="attempt" NEXT="legacyteacher"/>
+        <FIELD NAME="legacyteacher" TYPE="int" LENGTH="1" NOTNULL="true" UNSIGNED="true" DEFAULT="0" SEQUENCE="false" COMMENT="flag to specify this should use legacy teacher to access file." PREVIOUS="apimd5"/>
       </FIELDS>
       <KEYS>
         <KEY NAME="primary" TYPE="primary" FIELDS="id" NEXT="cm"/>
