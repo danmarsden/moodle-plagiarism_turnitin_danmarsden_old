@@ -458,7 +458,6 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
     public function cron() {
         global $CFG, $DB;
         require_once("$CFG->libdir/filelib.php"); //HACK to include filelib so that when event cron is run then file_storage class is available
-        require_once("$CFG->dirroot/mod/assignment/lib.php"); //HACK to include filelib so that when event cron is run then file_storage class is available
         $plagiarismsettings = $this->get_settings();
         if ($plagiarismsettings) {
             turnitin_get_scores($plagiarismsettings);
@@ -507,6 +506,9 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
         } else if ($eventdata->eventtype=="file_uploaded") {
             // check if the module associated with this event still exists
             $cm = $DB->get_record('course_modules', array('id' => $eventdata->cmid));
+
+            $modulename = $DB->get_field('modules', 'name', array('id' => $cm->module));
+
             if (!$cm) {
                 return true;
             }
@@ -533,7 +535,7 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
                         && $plagiarismvalues['plagiarism_draft_submit'] == PLAGIARISM_TII_DRAFTSUBMIT_FINAL) {
                     // Drafts haven't previously been sent
                     // get assignment details, list of draft files and submit to TII.
-                    require_once("$CFG->dirroot/mod/assignment/lib.php");
+                    require_once("$CFG->dirroot/mod/$modulename/lib.php");
                     // we need to get a list of files attached to this assignment and put them in an array, so that
                     // we can submit each of them for processing.
                     $assignmentbase = new assignment_base($cmid);
@@ -541,7 +543,7 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
                     $modulecontext = get_context_instance(CONTEXT_MODULE, $eventdata->cmid);
                     $fs = get_file_storage();
                     $result = true;
-                    if ($files = $fs->get_area_files($modulecontext->id, 'mod_assignment', 'submission', $submission->id, "timemodified", false)) {
+                    if ($files = $fs->get_area_files($modulecontext->id, 'mod_'.$modulename, 'submission', $submission->id, "timemodified", false)) {
                         foreach ($files as $file) {
                             $fileresult = false;
                             //TODO: need to check if this file has already been sent! - possible that the file was sent before draft submit was set.
@@ -927,7 +929,7 @@ function turnitin_send_file($pid, $plagiarismsettings, $file) {
     }
     $dtstart = $DB->get_record('plagiarism_turnitin_config', array('cm' => $cm->id, 'name' => 'turnitin_dtstart'));
     if (!empty($dtstart) && $dtstart->value > time()) {
-        mtrace("Warning: assignment start date is too early ".date('Y-m-d H:i:s', $dtstart->value)." in course $course->shortname assignment $module->name will delay sending files until next cron");
+        mtrace("Warning: $moduletype start date is too early ".date('Y-m-d H:i:s', $dtstart->value)." in course $course->shortname $moduletype $module->name will delay sending files until next cron");
         return false; //TODO: check that this doesn't cause a failure in cron
     }
     //Start Turnitin Session
@@ -1024,6 +1026,7 @@ function turnitin_get_scores($plagiarismsettings) {
             //set globals.
             $user = $DB->get_record('user', array('id'=>$file->userid));
             $coursemodule = $DB->get_record('course_modules', array('id'=>$file->cm));
+            $moduletype = $DB->get_field('modules', 'name', array('id' => $coursemodule->module));
             if ($coursemodule) {
                 $course = $DB->get_record('course', array('id'=>$coursemodule->course));
             } else {
@@ -1043,7 +1046,7 @@ function turnitin_get_scores($plagiarismsettings) {
                 $never = $DB->get_field('plagiarism_turnitin_config', 'value', array('cm'=>$file->cm, 'name'=>'plagiarism_show_student_report'));
                 if (empty($never)) {
                     //TODO: the student can't get at the report so we need to assign a teacher
-                    debugging("ERROR: the scores can't be retrieved for courseid: ".$course->id. ", cm:".$file->cm." please edit and resave the assignment as a teacher, this will ensure all the correct settings have been made.");
+                    debugging("ERROR: the scores can't be retrieved for courseid: ".$course->id. ", cm:".$file->cm." please edit and resave the $moduletype as a teacher, this will ensure all the correct settings have been made.");
                     continue;
                 }
                 $tii['utp']      = TURNITIN_STUDENT;
@@ -1316,8 +1319,10 @@ function turnitin_get_grademark_link($plagiarismfile, $course, $module, $plagiar
         //Grademark isn't available yet - don't provide link
         $output = '<img src="'.$OUTPUT->pix_url('i/grademark-grey').'">';
     } else {
+        $coursemodule = $DB->get_record('course_modules', array('id' => $plagiarismfile->cm));
+        $moduletype = $DB->get_field('modules', 'name', array('id' => $coursemodule->module));
         $tii = array();
-        if (!has_capability('mod/assignment:grade', get_context_instance(CONTEXT_MODULE, $plagiarismfile->cm))) {
+        if (!has_capability("mod/$moduletype:grade", get_context_instance(CONTEXT_MODULE, $plagiarismfile->cm))) {
             $tii['utp']      = TURNITIN_STUDENT;
             $tii = turnitin_get_tii_user($tii, $USER);
         } else {
@@ -1412,8 +1417,11 @@ function turnitin_get_report_link($file, $course, $plagiarismsettings) {
     global $DB, $USER;
     $return = '';
 
+    $coursemodule = $DB->get_record('course_modules', array('id' => $file->cm));
+    $moduletype = $DB->get_field('modules', 'name', array('id' => $coursemodule->module));
+
     $tii = array();
-    if (!has_capability('mod/assignment:grade', get_context_instance(CONTEXT_MODULE, $file->cm))) {
+    if (!has_capability("mod/$moduletype:grade", get_context_instance(CONTEXT_MODULE, $file->cm))) {
         $tii['utp']      = TURNITIN_STUDENT;
     } else {
         $tii['utp']      = TURNITIN_INSTRUCTOR;
