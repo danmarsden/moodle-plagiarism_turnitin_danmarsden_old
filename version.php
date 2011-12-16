@@ -17,7 +17,7 @@
 
 $plugin->version =  2011121400;
 $plugin->requires = 2010122500;
-$plugin->cron     = 0;
+$plugin->cron     = 300;
 $plugin->component = 'plagiarism_turnitin';
 $plugin->maturity  = MATURITY_STABLE;
 $plugin->release   = '2.2';
