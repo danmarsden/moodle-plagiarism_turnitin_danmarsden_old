@@ -336,11 +336,11 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
         if (!isset($USER->profile)) {
             // User has had a partial login - possibly over web services.
             // Check for profile details directly in DB:
-            $sql = 'SELECT uid.id, uid,data ' .
-                    'FROM {user_info_field} uif ' .
-                    ' INNER JOIN {user_info_data} uid ON uid.fieldid = uif.id ' .
-                    'WHERE uif.shortname = ? '.
-                    ' AND uid.userid = ? ';
+            $sql = 'SELECT d.id, d.data ' .
+                    'FROM {user_info_field} f ' .
+                    ' INNER JOIN {user_info_data} d ON d.fieldid = f.id ' .
+                    'WHERE f.shortname = ? '.
+                    ' AND d.userid = ? ';
             $userprofiledetail = $DB->get_record_sql($sql, array($userprofilefieldname, $USER->id));
             if (!empty($userprofiledetail)) {
                 $existingcourses = explode(',', $userprofiledetail->data);
@@ -354,11 +354,11 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
             $newrecord = false;
         } else {
             $existingcourses = array();
-            $sql = 'SELECT uid.id ' .
-                   ' FROM {user_info_field} uif ' .
-                   ' INNER JOIN {user_info_data} uid ON uid.fieldid = uif.id ' .
-                   ' WHERE uif.shortname = ? ' .
-                   ' AND uid.userid = ? ';
+            $sql = 'SELECT d.id ' .
+                   ' FROM {user_info_field} f ' .
+                   ' INNER JOIN {user_info_data} d ON d.fieldid = f.id ' .
+                   ' WHERE f.shortname = ? ' .
+                   ' AND d.userid = ? ';
             if (!$DB->record_exists_sql($sql, array($userprofilefieldname, $USER->id))) {
                 $newrecord = true;
             } else {
