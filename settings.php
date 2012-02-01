@@ -76,6 +76,7 @@
                 }
             }
         }
+        $plagiarismsettings = $plagiarismplugin->get_settings();
         //now call TII settings to set up teacher account as set on this page.
             if ($plagiarismsettings) { //get tii settings.
                 $tii = array();
