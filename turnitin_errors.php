@@ -32,8 +32,8 @@ require_once('turnitin_form.php');
 require_login();
 admin_externalpage_setup('plagiarismturnitin');
 
-$id = optional_param('id',0,PARAM_INT);
-$resetuser = optional_param('reset',0,PARAM_INT);
+$id = optional_param('id', 0, PARAM_INT);
+$resetuser = optional_param('reset', 0, PARAM_INT);
 $delete = optional_param('delete', 0, PARAM_INT);
 $page = optional_param('page', 0, PARAM_INT);
 $sort = optional_param('sort', '', PARAM_ALPHA);
@@ -46,7 +46,7 @@ echo $OUTPUT->header();
 $currenttab='turnitinerrors';
 require_once('turnitin_tabs.php');
 
-echo $OUTPUT->box(get_string('tiiexplainerrors','plagiarism_turnitin'));
+echo $OUTPUT->box(get_string('tiiexplainerrors', 'plagiarism_turnitin'));
 $sqlallfiles = "SELECT t.*, u.firstname, u.lastname, m.name as moduletype, ".
                "cm.course as courseid, cm.instance as cminstance FROM ".
                "{plagiarism_turnitin_files} t, {user} u, {modules} m, {course_modules} cm ".
@@ -54,48 +54,50 @@ $sqlallfiles = "SELECT t.*, u.firstname, u.lastname, m.name as moduletype, ".
                "AND t.statuscode <>'success' AND t.statuscode <>'pending' AND t.statuscode <> '51'";
 $sqlcount =  "SELECT COUNT(id) FROM {plagiarism_turnitin_files} WHERE statuscode <>'success' AND statuscode <>'pending' AND statuscode <> '51'";
 if ($resetuser==1 && $id) {
-    $sqlid = "SELECT t.*, u.firstname, u.lastname, u.id as userid, m.name as moduletype, cm.course as courseid, cm.instance as cminstance FROM {plagiarism_turnitin_files} t, {user} u, {modules} m, {course_modules} cm WHERE m.id=cm.module AND cm.id=t.cm AND t.userid=u.id AND t.id = ?";
+    $sqlid = "SELECT t.*, u.firstname, u.lastname, u.id as userid, m.name as moduletype, cm.course as courseid, cm.instance as cminstance
+              FROM {plagiarism_turnitin_files} t, {user} u, {modules} m, {course_modules} cm
+              WHERE m.id=cm.module AND cm.id=t.cm AND t.userid=u.id AND t.id = ?";
     $tfile = $DB->get_record_sql($sqlid, array('id'=>$id));
     $tfile->statuscode = 'pending';
     $modulecontext = get_context_instance(CONTEXT_MODULE, $tfile->cm);
     if ($tfile->moduletype =='assignment') {
-         $submission = $DB->get_record('assignment_submissions', array('assignment'=>$tfile->cminstance, 'userid'=>$tfile->userid));
-         $fs = get_file_storage();
-         $files = $fs->get_area_files($modulecontext->id, 'mod_assignment', 'submission', $submission->id);
-         if (!empty($files)) {
-             $eventdata = new stdClass();
-             $eventdata->modulename   = $tfile->moduletype;
-             $eventdata->cmid         = $tfile->cm;
-             $eventdata->courseid     = $tfile->courseid;
-             $eventdata->userid       = $tfile->userid;
-             $eventdata->files        = $files;
+        $submission = $DB->get_record('assignment_submissions', array('assignment'=>$tfile->cminstance, 'userid'=>$tfile->userid));
+        $fs = get_file_storage();
+        $files = $fs->get_area_files($modulecontext->id, 'mod_assignment', 'submission', $submission->id);
+        if (!empty($files)) {
+            $eventdata = new stdClass();
+            $eventdata->modulename   = $tfile->moduletype;
+            $eventdata->cmid         = $tfile->cm;
+            $eventdata->courseid     = $tfile->courseid;
+            $eventdata->userid       = $tfile->userid;
+            $eventdata->files        = $files;
 
-             events_trigger('assessable_file_uploaded', $eventdata);
-             //now reset status so that it disapears from error page
-             if ($DB->update_record('plagiarism_turnitin_files', $tfile)) {
-                 notify(get_string('fileresubmitted','plagiarism_turnitin'));
-             }
-         } else {
-             notify("could not find any files for this submission");
-         }
+            events_trigger('assessable_file_uploaded', $eventdata);
+            //now reset status so that it disapears from error page
+            if ($DB->update_record('plagiarism_turnitin_files', $tfile)) {
+                notify(get_string('fileresubmitted', 'plagiarism_turnitin'));
+            }
+        } else {
+            notify("could not find any files for this submission");
+        }
     } else {
         notify("resubmit function for ".$tfile->moduletype. " not complete yet");
     }
     //TODO: trigger event for this file
 
-} elseif ($resetuser==2) {
+} else if ($resetuser==2) {
     $tiifiles = get_records_sql($sqlallfiles);
-    foreach($tiifiles as $tiifile) {
+    foreach ($tiifiles as $tiifile) {
         $tiifile->statuscode = 'pending';
         //TODO: trigger event for this file
-       // if ($DB->update_record('plagiarism_turnitin_files', $tiifile)) {
-         //   notify(get_string('fileresubmitted','plagiarism_turnitin'));
+        // if ($DB->update_record('plagiarism_turnitin_files', $tiifile)) {
+        //   notify(get_string('fileresubmitted','plagiarism_turnitin'));
         //}
     }
- }
+}
 if (!empty($delete)) {
     $DB->delete_records('plagiarism_turnitin_files', array('id'=>$id));
-    notify(get_string('filedeleted','plagiarism_turnitin'));
+    notify(get_string('filedeleted', 'plagiarism_turnitin'));
 
 }
 //now do sorting if specified
@@ -103,11 +105,11 @@ $orderby = '';
 if (!empty($sort)) {
     if ($sort=="name") {
         $orderby = " ORDER BY u.firstname, u.lastname";
-    } elseif ($sort=="module") {
+    } else if ($sort=="module") {
         $orderby = " ORDER BY cm.id";
-    } elseif ($sort=="status") {
+    } else if ($sort=="status") {
         $orderby = " ORDER BY t.statuscode";
-    } elseif ($sort=="id") {
+    } else if ($sort=="id") {
         $orderby = " ORDER BY t.id";
     }
     if (!empty($orderby) && ($dir=='asc' || $dir=='desc')) {
@@ -118,7 +120,6 @@ if (!empty($sort)) {
 $count = $DB->count_records_sql($sqlcount);
 
 $turnitin_files = $DB->get_records_sql($sqlallfiles.$orderby, null, $page*$limit, $limit);
-
 
 $table = new html_table();
 $columns = array('id', 'name', 'module', 'file', 'status');
@@ -143,7 +144,7 @@ $table->head[] = '';
 $table->width = "95%";
 $fs = get_file_storage();
 foreach ($turnitin_files as $tf) {
-    $modulecontext = get_context_instance(CONTEXT_MODULE, $tf->cm); 
+    $modulecontext = get_context_instance(CONTEXT_MODULE, $tf->cm);
     $coursemodule = get_coursemodule_from_id($tf->moduletype, $tf->cm);
     $file = $fs->get_file_by_hash($tf->identifier);
     if ($file) {
@@ -155,10 +156,9 @@ foreach ($turnitin_files as $tf) {
 
     $user = "<a href='".$CFG->wwwroot."/user/profile.php?id=".$tf->userid."'>".fullname($tf)."</a>";
 
-    $reset = '<a href="turnitin_errors.php?reset=1&id='.$tf->id.'">'.get_string('resubmit','plagiarism_turnitin').'</a> | '.
+    $reset = '<a href="turnitin_errors.php?reset=1&id='.$tf->id.'">'.get_string('resubmit', 'plagiarism_turnitin').'</a> | '.
              '<a href="turnitin_errors.php?delete=1&id='.$tf->id.'">'.get_string('delete').'</a>';
-    //$cmlink = '<a href="'.$CFG->wwwroot.'/mod/'.$tf->moduletype.'/view.php?id='.$tf->cm.'">'.$coursemodule->name.'</a>';
-    $cmurl = new moodle_url($CFG->wwwroot.'/mod/'.$tf->moduletype.'/view.php',array('id'=>$tf->cm));
+    $cmurl = new moodle_url($CFG->wwwroot.'/mod/'.$tf->moduletype.'/view.php', array('id'=>$tf->cm));
     $cmlink = html_writer::link($cmurl, shorten_text($coursemodule->name, 40, true), array('title'=>$coursemodule->name));
     $table->data[] = array ($tf->id,
                             $user,
@@ -167,9 +167,9 @@ foreach ($turnitin_files as $tf) {
                             $tf->statuscode,
                             $reset);
 }
-    if (!empty($table)) {
-        echo html_writer::table($table);
-        echo $OUTPUT->paging_bar($count, $page, $limit, $baseurl);
-    }
+if (!empty($table)) {
+    echo html_writer::table($table);
+    echo $OUTPUT->paging_bar($count, $page, $limit, $baseurl);
+}
 
 echo $OUTPUT->footer();

@@ -1,4 +1,18 @@
 <?php
+// This file is part of Moodle - http://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 defined('MOODLE_INTERNAL') || die();
 
@@ -26,7 +40,7 @@ class restore_plagiarism_turnitin_plugin extends restore_plagiarism_plugin {
 
         if ($this->task->is_samesite()) { //files can only be restored if this is the same site as was backed up.
             //check to see if this plagiarism id already exists in a different course.
-            $recexists = $DB->record_exists_select('config_plugins', "plugin = ? AND ".$DB->sql_compare_text('value',10). " = ?", array($data->plugin, $data->value));
+            $recexists = $DB->record_exists_select('config_plugins', "plugin = ? AND ".$DB->sql_compare_text('value', 10). " = ?", array($data->plugin, $data->value));
             if ($data->name == $this->task->get_courseid() || !$recexists) {
                 //only restore if a link to this course doesn't already exist in this install.
                 $this->existingcourse = false;
