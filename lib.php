@@ -581,10 +581,12 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
                     continue;
                 }
 
-                //TODO - check if this particular file has already been submitted.
+                //check if this particular file has already been submitted.
                 $pid = plagiarism_update_record($cmid, $eventdata->userid, $efile->get_pathnamehash());
                 if (!empty($pid)) {
                     $fileresult = turnitin_send_file($pid, $plagiarismsettings, $efile);
+                } else {
+                    $fileresult = true; //file already been sent.
                 }
                 $result = $result && $fileresult;
             }
