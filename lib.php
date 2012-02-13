@@ -279,20 +279,24 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
 
     public function print_disclosure($cmid) {
         global $DB, $OUTPUT;
+
+        $outputhtml = '';
+
         if ($plagiarismsettings = $this->get_settings()) {
             if (!empty($plagiarismsettings['turnitin_student_disclosure'])) {
 
                 $params = array('cm' => $cmid, 'name' => 'use_turnitin');
                 $showdisclosure = $DB->get_field('plagiarism_turnitin_config', 'value', $params);
                 if ($showdisclosure) {
-                    echo $OUTPUT->box_start('generalbox boxaligncenter', 'intro');
+                    $outputhtml .= $OUTPUT->box_start('generalbox boxaligncenter', 'intro');
                     $formatoptions = new stdClass;
                     $formatoptions->noclean = true;
-                    echo format_text($plagiarismsettings['turnitin_student_disclosure'], FORMAT_MOODLE, $formatoptions);
-                    echo $OUTPUT->box_end();
+                    $outputhtml .= format_text($plagiarismsettings['turnitin_student_disclosure'], FORMAT_MOODLE, $formatoptions);
+                    $outputhtml .= $OUTPUT->box_end();
                 }
             }
         }
+        return $outputhtml;
     }
     /**
      * This function should be used to initialise settings and check if plagiarism is enabled
@@ -323,6 +327,9 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
 
     public function update_status($course, $cm) {
         global $DB, $USER, $OUTPUT;
+
+        $outputhtml = '';
+
         $userprofilefieldname = 'turnitinteachercoursecache';
         if (!$plagiarismsettings = $this->get_settings()) {
             return;
@@ -366,7 +373,7 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
         }
 
         if (!in_array($course->id, $existingcourses)) {
-            // Turnititin doesn't (yet) know that this user is a teacher in this course.  Tell them:
+            // Turnitin doesn't (yet) know that this user is a teacher in this course.  Tell them:
             $tii = array();
             $tii['utp']      = TURNITIN_INSTRUCTOR;
             $tii = turnitin_get_tii_user($tii, $USER);
@@ -377,8 +384,7 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
             $tii['fid']  = TURNITIN_CREATE_CLASS;
             $tiixml = plagiarism_get_xml(turnitin_get_url($tii, $plagiarismsettings));
             if ($tiixml->rcode[0] != TURNITIN_RESP_CLASS_CREATED) {
-                $OUTPUT->notification(get_string('errorassigninguser', 'plagiarism_turnitin'));
-                return;
+                return $OUTPUT->notification(get_string('errorassigninguser','plagiarism_turnitin'));
             }
             $existingcourses[] = $course->id;
             $newcoursecache =  implode(',', $existingcourses);
@@ -404,12 +410,12 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
         $tii['utp'] = TURNITIN_INSTRUCTOR;
         $tii['fid'] = TURNITIN_CREATE_USER; //set commands - Administrator login/statistics.
         $tii = turnitin_get_tii_user($tii, $USER);
-        echo '<div style="text-align:right"><a href="'.turnitin_get_url($tii, $plagiarismsettings).'" target="_blank">'.get_string("teacherlogin", "plagiarism_turnitin").'</a></div>';
+        $outputhtml .= '<div style="text-align:right"><a href="'.turnitin_get_url($tii, $plagiarismsettings).'" target="_blank">'.get_string("teacherlogin","plagiarism_turnitin").'</a></div>';
 
         //currently only used for grademark - check if enabled and return if not.
         //TODO: This call degrades page performance - need to run less frequently.
         if (empty($plagiarismsettings['turnitin_enablegrademark'])) {
-            return;
+            return $outputhtml;
         }
         if (!$moduletype = $DB->get_field('modules', 'name', array('id'=>$cm->module))) {
             debugging("invalid moduleid! - moduleid:".$cm->module);
@@ -449,6 +455,7 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
                 }
             }
         }
+        return $outputhtml;
     }
     /**
      * used by admin/cron.php to get similarity scores from submitted files.
