@@ -1192,30 +1192,32 @@ function turnitin_update_assignment($plagiarismsettings, $plagiarismvalues, $eve
             if (empty($plagiarismvalues['turnitin_assignid'])) {
                 $tii['assignid']   = "a_".time().rand(10, 5000); //some unique random id only used once.
                 $tii['fcmd'] = TURNITIN_RETURN_XML;
-                // TII API rules mean that new assignments cannot have a start date/time in the past
-                // (as judged by TII servers). Add some time to account for possibility of our
-                // clock being fast, or TII clock being slow.
-                // We'll set the assignment start time properly after the assignment has been
-                // created, (the API rules are less restrictive for updates).
-                $timestamp = strtotime('+10 minutes');
-                $tii['dtstart'] = rawurlencode(date($tunitindateformat, $timestamp));
-                $timestartconfig = new stdClass();
-                $timestartconfig->cm = $cm->id;
-                $timestartconfig->name = 'turnitin_dtstart';
-                $timestartconfig->value = $tii['dtstart'];
-                $DB->insert_record('plagiarism_turnitin_config', $timestartconfig);
-
                 $tii['dtdue'] = rawurlencode(date($tunitindateformat, strtotime('+1 year')));
             } else {
                 $tii['assignid'] = $plagiarismvalues['turnitin_assignid'];
                 $tii['fcmd'] = TURNITIN_UPDATE_RETURN_XML;
-                $tii['dtstart']  = $DB->get_field('plagiarism_turnitin_config', 'value', array('cm' => $cm->id,
-                                                                                    'name' => 'turnitin_dtstart'));
                 if (empty($module->timedue)) {
                     $tii['dtdue'] = rawurlencode(date($tunitindateformat, strtotime('+1 year')));
                 } else {
                     $tii['dtdue']    = rawurlencode(date($tunitindateformat, $module->timedue));
                 }
+            }
+            $conditions      = array('cm'   => $cm->id,
+                                     'name' => 'turnitin_dtstart');
+            $tii['dtstart']  = $DB->get_field('plagiarism_turnitin_config', 'value', $conditions);
+            if (!$tii['dtstart']) {
+                // TII API rules mean that new assignments cannot have a start date/time in the past
+                // (as judged by TII servers). Add some time to account for possibility of our
+                // clock being fast, or TII clock being slow.
+                // We'll set the assignment start time properly after the assignment has been
+                // created, (the API rules are less restrictive for updates).
+                $timestamp              = strtotime('+10 minutes');
+                $tii['dtstart']         = rawurlencode(date($tunitindateformat, $timestamp));
+                $timestartconfig        = new stdClass();
+                $timestartconfig->cm    = $cm->id;
+                $timestartconfig->name  = 'turnitin_dtstart';
+                $timestartconfig->value = $tii['dtstart'];
+                $DB->insert_record('plagiarism_turnitin_config', $timestartconfig);
             }
             $tii['assign']   = turnitin_get_assign_name($module->name, $cm->id); //assignment name stored in TII
             $tii['fid']      = TURNITIN_CREATE_ASSIGNMENT;
