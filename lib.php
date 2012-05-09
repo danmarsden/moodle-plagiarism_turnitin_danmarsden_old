@@ -529,11 +529,7 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
                 return false;
             }
 
-            if (!empty($eventdata->file) && empty($eventdata->files)) { //single assignment type passes a single file
-                $eventdata->files[] = $eventdata->file;
-            }
-
-            if (empty($eventdata->files)) {
+            if (empty($eventdata->pathnamehashes)) {
                 // There are no files attached to this 'fileuploaded' event.
                 // This is a 'finalize' event - assignment-focused functionality
                 mtrace("finalise");
@@ -574,17 +570,16 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
             // Normal scenario - this is an upload event with one or more attached files
             // Attached file(s) are to be immediately submitted to TII
             $result = true;
-            foreach ($eventdata->files as $efile) {
+            foreach ($eventdata->pathnamehashes as $hash) {
                 $fileresult = false;
-                if ($efile->get_filename() ==='.') {
-                    // This is a directory - nothing to do.
-                    continue;
-                }
-                //hacky way to check file still exists
                 $fs = get_file_storage();
-                $fileid = $fs->get_file_by_hash($efile->get_pathnamehash());
-                if (empty($fileid)) {
+                $efile = $fs->get_file_by_hash($hash);
+
+                if (empty($efile)) {
                     mtrace("nofilefound!");
+                    continue;
+                } else if ($efile->get_filename() ==='.') {
+                    // This is a directory - nothing to do.
                     continue;
                 }
 
