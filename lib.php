@@ -574,14 +574,15 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
                 $fileresult = false;
                 $fs = get_file_storage();
                 $efile = $fs->get_file_by_hash($hash);
-                if ($efile->get_filename() ==='.') {
-                    // This is a directory - nothing to do.
-                    continue;
-                }
 
                 //hacky way to check file still exists
                 if (empty($efile)) {
                     mtrace("nofilefound!");
+                    continue;
+                }
+
+                if ($efile->get_filename() ==='.') {
+                    // This is a directory - nothing to do.
                     continue;
                 }
 
