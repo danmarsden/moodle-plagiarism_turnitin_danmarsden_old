@@ -130,7 +130,7 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
      * @param stored_file $file file object describing a moodle file which was submited to TII
      * @return mixed - false if no info available, or an array describing what's known about the TII submission
      */
-    public function get_file_results($cmid, $userid, $file) {
+    public function get_file_results($cmid, $userid, stored_file $file) {
         global $DB, $USER, $COURSE, $OUTPUT;
 
         $plagiarismsettings = $this->get_settings();
