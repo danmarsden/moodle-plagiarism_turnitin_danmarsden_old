@@ -130,7 +130,7 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
      * @param stored_file $file file object describing a moodle file which was submited to TII
      * @return mixed - false if no info available, or an array describing what's known about the TII submission
      */
-    public function get_file_results($cmid, $userid, stored_file $file) {
+    public function get_file_results($cmid, $userid, $file) {
         global $DB, $USER, $COURSE, $OUTPUT;
 
         $plagiarismsettings = $this->get_settings();
@@ -529,11 +529,7 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
                 return false;
             }
 
-            if (!empty($eventdata->file) && empty($eventdata->files)) { //single assignment type passes a single file
-                $eventdata->files[] = $eventdata->file;
-            }
-
-            if (empty($eventdata->files)) {
+            if (empty($eventdata->pathnamehashes)) {
                 // There are no files attached to this 'fileuploaded' event.
                 // This is a 'finalize' event - assignment-focused functionality
                 mtrace("finalise");
@@ -574,16 +570,17 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
             // Normal scenario - this is an upload event with one or more attached files
             // Attached file(s) are to be immediately submitted to TII
             $result = true;
-            foreach ($eventdata->files as $efile) {
+            foreach ($eventdata->pathnamehashes as $hash) {
                 $fileresult = false;
+                $fs = get_file_storage();
+                $efile = $fs->get_file_by_hash($hash);
                 if ($efile->get_filename() ==='.') {
                     // This is a directory - nothing to do.
                     continue;
                 }
+
                 //hacky way to check file still exists
-                $fs = get_file_storage();
-                $fileid = $fs->get_file_by_hash($efile->get_pathnamehash());
-                if (empty($fileid)) {
+                if (empty($efile)) {
                     mtrace("nofilefound!");
                     continue;
                 }
