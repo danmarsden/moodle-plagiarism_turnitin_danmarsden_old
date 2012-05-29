@@ -508,7 +508,7 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
         } else if ($eventdata->eventtype=="mod_updated") {
             return turnitin_update_assignment($plagiarismsettings, $plagiarismvalues, $eventdata, 'update');
         } else if ($eventdata->eventtype=="mod_deleted") {
-            return turnitin_update_assignment($plagiarismsettings, $plagiarismvalues, $eventdata, 'delete');
+            return turnitin_delete_assignment($plagiarismsettings, $plagiarismvalues, $eventdata);
         } else if ($eventdata->eventtype=="file_uploaded") {
             // check if the module associated with this event still exists
             $cm = $DB->get_record('course_modules', array('id' => $eventdata->cmid));
@@ -1290,6 +1290,21 @@ function turnitin_update_assignment($plagiarismsettings, $plagiarismvalues, $eve
     }
     turnitin_end_session($user, $plagiarismsettings, $tiisession);
     return $result;
+}
+
+/**
+ * Delete function deliberately not handled (fid=8)
+ * if an assignment is deleted "accidentally" we can resotre off backups - but if
+ * the external Turnitin assignment is deleted, we can't easily restore that.
+ * maybe a config option could be added to enable/disable this
+ *
+ * @param type array $plagiarismsettings
+ * @param type array $plagiarismvalues
+ * @param type $eventdata - data returned in an event
+ * @return type boolean - returns true
+ */
+function turnitin_delete_assignment($plagiarismsettings, $plagiarismvalues, $eventdata) {
+    return true;
 }
 
 /**
