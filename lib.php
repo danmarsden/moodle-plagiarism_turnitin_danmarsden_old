@@ -504,7 +504,7 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
         }
 
         if ($eventdata->eventtype == "mod_created") {
-            return turnitin_update_assignment($plagiarismsettings, $plagiarismvalues, $eventdata, 'create');
+            return turnitin_create_assignment($plagiarismsettings, $plagiarismvalues, $eventdata);
         } else if ($eventdata->eventtype=="mod_updated") {
             return turnitin_update_assignment($plagiarismsettings, $plagiarismvalues, $eventdata, 'update');
         } else if ($eventdata->eventtype=="mod_deleted") {
@@ -1110,6 +1110,173 @@ function turnitin_error_text($statuscode, $notify=true) {
         }
     }
     return $return;
+}
+
+/**
+ * creates the class and assignment within Turnitin - used by event handlers.
+ *
+ * @global type $DB
+ * @param type array $plagiarismsettings
+ * @param type array $plagiarismvalues
+ * @param type $eventdata
+ * @return boolean $result
+ */
+function turnitin_create_assignment($plagiarismsettings, $plagiarismvalues, $eventdata) {
+    global $DB;
+    $result = true;
+    //first check everything that is required...exists.
+    $course = $DB->get_record('course',  array('id'=>$eventdata->courseid));
+    if (empty($course)) {
+        debugging("couldn't find course record - might have been deleted?", DEBUG_DEVELOPER);
+        return true; //don't let this event kill cron
+    }
+    if (!$cm = $DB->get_record('course_modules', array('id'=>$eventdata->cmid))) {
+         debugging("invalid cmid! - might have been deleted?".$eventdata->cmid, DEBUG_DEVELOPER);
+        return true; //don't let this event kill cron
+    }
+    if (!$module = $DB->get_record($eventdata->modulename, array('id'=>$cm->instance))) {
+        debugging("invalid instanceid! - instance:".$cm->instance, DEBUG_DEVELOPER);
+        return true; //don't let this event kill cron
+    }
+    if (!$user = $DB->get_record('user', array('id'=>$eventdata->userid))) {
+        debugging("invalid userid! - :".$eventdata->userid, DEBUG_DEVELOPER);
+        return true; //don't let this event kill cron
+    }
+    if (!empty($plagiarismvalues['turnitin_assignid']) || !empty($plagiarismvalues['turnitin_assign'])) { //shouldn't happen but just in case!
+        debugging("assignment exists for cmid! - :".$eventdata->cmid, DEBUG_DEVELOPER);
+        return true; //don't let this event kill cron
+    }
+    // get a session
+    $tiisession = turnitin_start_session($user, $plagiarismsettings);
+    $tii = array();
+    // standard parameters needs for class and assignment creation
+    //$tii['diagnostic'] = '1'; //debug only - uncomment when using in production.
+    $tii['utp'] = TURNITIN_INSTRUCTOR;
+    $tii = turnitin_get_tii_user($tii, $user);
+    $tii['session-id'] = $tiisession;
+    $tii['ctl'] = (strlen($course->shortname) > 45 ? substr($course->shortname, 0, 45) : $course->shortname); //shouldn't happen but just in case!
+    $tii['ctl'] = (strlen($tii['ctl']) > 5 ? $tii['ctl'] : $tii['ctl']."_____");
+    // class creation
+    $tiiclassid = get_config('plagiarism_turnitin_course', $course->id); // unique classid
+    if ($tiiclassid) {
+        $tii['cid'] = $tiiclassid;
+        mtrace('class already exists on Turnitin');
+    } else {
+        // create class on Turnitin
+        $tii['utp'] = TURNITIN_INSTRUCTOR;
+        $tiiclassid = "c_".time().rand(10, 5000); //some unique random id only used once.
+        $tii['cid'] = $tiiclassid;
+        $tii['fcmd'] = TURNITIN_RETURN_XML;
+        $tii['fid']  = TURNITIN_CREATE_CLASS; // create class under the given account and assign above user as instructor (fid=2)
+        $tiixml = plagiarism_get_xml(turnitin_get_url($tii, $plagiarismsettings));
+        if ($tiixml->rcode[0] == TURNITIN_RESP_CLASS_CREATED) {
+            //save external courseid for future reference.
+            set_config($course->id, $tii['cid'], 'plagiarism_turnitin_course');
+            mtrace('class created on Turnitin: '. $tiixml->classid[0]); //maybe classid should be stored as well
+        } else {
+            mtrace('Error: '.$tiixml->rcode[0].' '.$tiixml->rmessage);
+            $result = false;
+        }
+    }
+    // assignment creation
+    if ($result) {
+        // create assignment on Turnitin
+        $tii['fid'] = TURNITIN_CREATE_ASSIGNMENT;
+        $tii['fcmd'] = TURNITIN_RETURN_XML;
+        $tii['assignid'] = "a_".time().rand(10, 5000); // some unique random id only used once for initial creation
+        $tii['assign'] = turnitin_get_assign_name($module->name, $cm->id); //assignment used on Turnitin
+        $turnitindateformat = 'Y-m-d H:i:s';
+        // possibly imported/restored with dates in past, why would dates be set in past, failed event?
+        if (!empty($module->timeavailable) && ($module->timeavailable > strtotime('+10 minutes'))) {
+            $dtstart = $module->timeavailable;
+            $tii['dtstart'] = rawurlencode(date($turnitindateformat, $dtstart));
+        } else {
+            $dtstart = strtotime('+10 minutes');
+            $tii['dtstart'] = rawurlencode(date($turnitindateformat, $dtstart));
+        }
+        if (!empty($module->timedue) && ($module->timedue > strtotime('+10 minutes'))) {
+            $dtdue = $module->timedue;
+            $tii['dtdue'] = rawurlencode(date($turnitindateformat, $dtdue));
+        } else {
+            $dtdue = strtotime('+1 year');
+            $tii['dtdue'] = rawurlencode(date($turnitindateformat, $dtdue));
+        }
+        if (!empty($module->preventlate)) {
+            $tii['late_accept_flag'] = 1;
+        } else {
+            $tii['late_accept_flag'] = 0;
+        }
+        if (isset($module->intro) && isset($module->introformat)) {
+            $intro = '';
+            switch ($module->introformat) {
+                case FORMAT_HTML:
+                    $intro = html_to_text($module->intro, null, false);
+                    break;
+                case FORMAT_PLAIN:
+                    $intro = $module->intro;
+                    break;
+                default:
+                    $intro = '';
+            }
+            if (strlen($intro) <= 1000) { // 1000 character limit
+                $tii['ainst'] = $intro;
+            }
+        }
+        if (!empty($module->grade)) {
+            $tii['max_points'] = ceil($module->grade);
+        } else {
+            $tii['max_points'] = 0;
+        }
+        $tii['s_view_report'] = (empty($plagiarismvalues['plagiarism_show_student_report']) ? '0' : '1'); //allow students to view the full report.
+        // search against
+        $tii['s_paper_check'] = (isset($plagiarismvalues['plagiarism_compare_student_papers']) ? $plagiarismvalues['plagiarism_compare_student_papers'] : '1');
+        $tii['internet_check'] = (isset($plagiarismvalues['plagiarism_compare_internet']) ? $plagiarismvalues['plagiarism_compare_internet'] : '1');
+        $tii['journal_check'] = (isset($plagiarismvalues['plagiarism_compare_journals']) ? $plagiarismvalues['plagiarism_compare_journals'] : '1');
+        $tii['institution_check'] = (isset($plagiarismvalues['plagiarism_compare_institution']) && get_config('plagiarism', 'turnitin_institutionnode') ? $plagiarismvalues['plagiarism_compare_institution'] : '0');
+        $tii['report_gen_speed'] = (isset($plagiarismvalues['plagiarism_report_gen']) ? $plagiarismvalues['plagiarism_report_gen'] : '1'); //default immediately (can overwrite until due date)
+        // exclude bibliographic, quoted materials
+        $tii['exclude_biblio'] = (isset($plagiarismvalues['plagiarism_exclude_biblio']) ? $plagiarismvalues['plagiarism_exclude_biblio'] : '0');
+        $tii['exclude_quoted'] = (isset($plagiarismvalues['plagiarism_exclude_quoted']) ? $plagiarismvalues['plagiarism_exclude_quoted'] : '0');
+        // exclude small matches
+        $tii['exclude_type'] = (isset($plagiarismvalues['plagiarism_exclude_matches']) ? $plagiarismvalues['plagiarism_exclude_matches'] : '0');
+        $tii['exclude_value'] = (isset($plagiarismvalues['plagiarism_exclude_matches_value']) ? $plagiarismvalues['plagiarism_exclude_matches_value'] : '');
+        $tii['anon'] = (empty($plagiarismvalues['plagiarism_anonymity']) ? '0' : '1');
+        // send request to Turnitin
+        $tiixml = turnitin_post_data($tii, $plagiarismsettings);
+        if ($tiixml->rcode[0] == TURNITIN_RESP_ASSIGN_CREATED && !empty($tiixml->assignmentid[0])) {
+            // save this teacher as the "main" teacher account for this assignment, use this teacher when retrieving reports:
+            $configval = new stdClass();
+            $configval->cm = $cm->id;
+            $configval->name = 'turnitin_mainteacher';
+            $configval->value = (string) $user->id;
+            $DB->insert_record('plagiarism_turnitin_config', $configval);
+            // save assignid
+            $configval = new stdClass();
+            $configval->cm = $cm->id;
+            $configval->name = 'turnitin_assignid';
+            $configval->value = (string) $tiixml->assignmentid[0];
+            $DB->insert_record('plagiarism_turnitin_config', $configval);
+            // save assign, needed if Moodle assignment title changed
+            $configval = new stdClass();
+            $configval->cm = $cm->id;
+            $configval->name = 'turnitin_assign';
+            $configval->value = (string) $tii['assign'];
+            $DB->insert_record('plagiarism_turnitin_config', $configval);
+            // save dtstart as epoch will be compared against time()
+            $configval = new stdClass();
+            $configval->cm = $cm->id;
+            $configval->name = 'turnitin_dtstart';
+            $configval->value = (string) $dtstart;
+            $DB->insert_record('plagiarism_turnitin_config', $configval);
+            mtrace('assignment created on Turnitin: '.$tiixml->assignmentid[0]);
+        } else {
+            mtrace('Error: '.$tiixml->rcode[0].' '.$tiixml->rmessage. ' [' .$tii['assign']. ']');
+            $result = false;
+        }
+    }
+    // close session
+    turnitin_end_session($user, $plagiarismsettings, $tiisession);
+    return $result;
 }
 
 /**
