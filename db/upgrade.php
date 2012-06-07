@@ -192,5 +192,34 @@ function xmldb_plagiarism_turnitin_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2011121400, 'plagiarism', 'turnitin');
     }
 
+    if ($oldversion < 2012050901) {
+        //get Turnitin lib
+        require_once($CFG->dirroot.'/plagiarism/turnitin/lib.php');
+        // Add config turnitin_assign to handle title renames
+        $sql = "SELECT cm.id AS cmid, m.name AS modulename, cm.instance, cm.course
+                FROM mdl_course_modules cm, mdl_modules m
+                WHERE cm.id IN (SELECT tc.cm FROM mdl_plagiarism_turnitin_config tc
+                                WHERE tc.name = 'turnitin_assignid'
+                                )
+                AND cm.module = m.id
+                ORDER BY cm.id";
+        $records = $DB->get_records_sql($sql);
+        foreach ($records as $record) {
+            $name = $DB->get_field($record->modulename, 'name', array('id'=>$record->instance));
+            if ($name) {
+                $assign = turnitin_get_assign_name($name, $record->cmid) ;
+                $config = new stdClass();
+                $config->cm = $record->cmid;
+                $config->name = 'turnitin_assign';
+                $config->value = $assign;
+                if (!$DB->record_exists('plagiarism_turnitin_config', (array) $config)) {
+                    $DB->insert_record('plagiarism_turnitin_config', $config);
+                }
+            }
+        }
+        // turnitin savepoint reached
+        upgrade_plugin_savepoint(true, 2012050901, 'plagiarism', 'turnitin');
+    }
+
     return true;
 }
