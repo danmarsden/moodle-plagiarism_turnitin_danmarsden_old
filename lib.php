@@ -942,7 +942,12 @@ function turnitin_send_file($pid, $plagiarismsettings, $file) {
     $tii['fid']      = TURNITIN_CREATE_USER;
     $tiixml = plagiarism_get_xml(turnitin_get_url($tii, $plagiarismsettings, false, $pid));
     if (empty($tiixml->rcode[0]) or $tiixml->rcode[0] <> TURNITIN_RESP_USER_CREATED) { //this is the success code for uploading a file. - we need to return the oid and save it!
-         mtrace('could not create user/login to turnitin code:'.$tiixml->rcode[0]);
+         //probably 423 error, record so can track down and get tii to fix
+         $plagiarism_file->statuscode = (string) $tiixml->rcode[0];
+         if (! $DB->update_record('plagiarism_turnitin_files', $plagiarism_file)) {
+             debugging("Error updating turnitin_files record");
+         }
+         mtrace('Error: '.$tiixml->rcode[0].' '.$tiixml->rmessage[0]);
     } else {
         $plagiarism_file = $DB->get_record('plagiarism_turnitin_files', array('id'=>$pid)); //make sure we get latest record as it may have changed
         $plagiarism_file->statuscode = (string)$tiixml->rcode[0];
