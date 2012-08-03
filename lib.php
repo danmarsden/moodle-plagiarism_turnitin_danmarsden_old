@@ -1222,7 +1222,7 @@ function turnitin_create_assignment($plagiarismsettings, $plagiarismvalues, $eve
                 $tii['ainst'] = $intro;
             }
         }
-        if (!empty($module->grade)) {
+        if (!empty($module->grade) && $module->grade > 0 && $module->grade <= 1000) {
             $tii['max_points'] = ceil($module->grade);
         } else {
             $tii['max_points'] = 0;
@@ -1400,7 +1400,7 @@ function turnitin_update_assignment($plagiarismsettings, $plagiarismvalues, $eve
                 $tii['ainst'] = $intro;
             }
         }
-        if (!empty($module->grade)) {
+        if (!empty($module->grade) && $module->grade > 0 && $module->grade <= 1000) {
             $tii['max_points'] = ceil($module->grade);
         } else {
             $tii['max_points'] = 0;
