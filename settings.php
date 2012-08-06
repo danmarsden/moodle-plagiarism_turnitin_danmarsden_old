@@ -159,6 +159,11 @@ if ($dbman->table_exists($table) && $dbman->table_exists($table2)) {
     $dbman->rename_table($table, 'tii_files_legacy');
 }
 //finished check for old tables..
+$invalidhandlers = check_event_handlers();
+if (!empty($invalidhandlers)) {
+    echo $OUTPUT->notification("There are invalid event handlers - these MUST be fixed");
+    print_object($invalidhandlers);
+}
 
 
 if ($plagiarismsettings) {

@@ -1743,3 +1743,24 @@ function turnitin_get_assign_name($name, $cmid) {
     $shortname = (strlen($name) > $maxnamelength) ? substr($name, 0, $maxnamelength) : $name;
     return $shortname.$suffix;
 }
+
+//function to check for invalid event_handlers
+function check_event_handlers() {
+    global $DB, $CFG;
+    $invalidhandlers = array();
+    $eventhandlers = $DB->get_records('events_handlers');
+    foreach ($eventhandlers as $handler) {
+        $function = unserialize($handler->handlerfunction);
+
+        if (is_callable($function)) { //this function is fine.
+            continue;
+        } else if (file_exists($CFG->dirroot.$handler->handlerfile)) {
+            include_once($CFG->dirroot.$handler->handlerfile);
+            if (is_callable($function)) { //this function is fine.
+               continue;
+            }
+        }
+        $invalidhandlers[] = $handler; //this function can't be found.
+    }
+    return $invalidhandlers;
+}
