@@ -60,10 +60,15 @@ if ($resetuser==1 && $id) {
     $tfile = $DB->get_record_sql($sqlid, array('id'=>$id));
     $tfile->statuscode = 'pending';
     $modulecontext = get_context_instance(CONTEXT_MODULE, $tfile->cm);
-    if ($tfile->moduletype =='assignment') {
-        $submission = $DB->get_record('assignment_submissions', array('assignment'=>$tfile->cminstance, 'userid'=>$tfile->userid));
+    if ($tfile->moduletype == 'assignment' or $tfile->moduletype == 'assign') {
         $fs = get_file_storage();
-        $files = $fs->get_area_files($modulecontext->id, 'mod_assignment', 'submission', $submission->id);
+        if ($tfile->moduletype =='assignment') {
+            $submission = $DB->get_record('assignment_submissions', array('assignment'=>$tfile->cminstance, 'userid'=>$tfile->userid));
+            $files = $fs->get_area_files($modulecontext->id, 'mod_assignment', 'submission', $submission->id);
+        } else if ($tfile->moduletype =='assign') {
+            $submission = $DB->get_record('assign_submission', array('assignment'=>$tfile->cminstance, 'userid'=>$tfile->userid));
+            $files = $fs->get_area_files($modulecontext->id, 'assignsubmission_file', ASSIGNSUBMISSION_FILE_FILEAREA, $submission->id, "id", false);
+        }
         if (!empty($files)) {
             $eventdata = new stdClass();
             $eventdata->modulename   = $tfile->moduletype;
