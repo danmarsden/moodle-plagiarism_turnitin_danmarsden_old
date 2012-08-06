@@ -161,8 +161,14 @@ if ($dbman->table_exists($table) && $dbman->table_exists($table2)) {
 //finished check for old tables..
 $invalidhandlers = check_event_handlers();
 if (!empty($invalidhandlers)) {
-    echo $OUTPUT->notification("There are invalid event handlers - these MUST be fixed");
-    print_object($invalidhandlers);
+    echo $OUTPUT->notification("There are invalid event handlers - these MUST be fixed. Please use the correct procedure to uninstall any components listed in the table below.<br>
+     The existence of these events may cause this plugin to function incorrectly.");
+    $table = new html_table();
+    $table->head  = array('eventname', 'plugin', 'handlerfile');
+    foreach($invalidhandlers as $handler) {
+        $table->data[] = array($handler->eventname, $handler->component, $handler->handlerfile);
+    }
+    echo html_writer::table($table);
 }
 
 
