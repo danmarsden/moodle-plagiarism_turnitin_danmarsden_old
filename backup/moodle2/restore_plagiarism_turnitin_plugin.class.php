@@ -81,6 +81,9 @@ class restore_plagiarism_turnitin_plugin extends restore_plagiarism_plugin {
             if ($data->name == 'turnitin_assignid') { //check if this assignid already exists
                 $recexists = $DB->record_exists('plagiarism_turnitin_config', array('name'=>'turnitin_assignid', 'value' => $data->value));
             }
+            if ($data->name == 'turnitin_assign') { //check if this assign already exists
+                $recexists = $DB->record_exists('plagiarism_turnitin_config', array('name'=>'turnitin_assign', 'value' => $data->value));
+            }
             if (!$recexists) {
                 $data = (object)$data;
                 $oldid = $data->id;

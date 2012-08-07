@@ -1245,29 +1245,37 @@ function turnitin_create_assignment($plagiarismsettings, $plagiarismvalues, $eve
         $tiixml = turnitin_post_data($tii, $plagiarismsettings);
         if ($tiixml->rcode[0] == TURNITIN_RESP_ASSIGN_CREATED && !empty($tiixml->assignmentid[0])) {
             // save this teacher as the "main" teacher account for this assignment, use this teacher when retrieving reports:
-            $configval = new stdClass();
-            $configval->cm = $cm->id;
-            $configval->name = 'turnitin_mainteacher';
-            $configval->value = (string) $user->id;
-            $DB->insert_record('plagiarism_turnitin_config', $configval);
+            if (!$DB->record_exists('plagiarism_turnitin_config', array('cm'=>$cm->id, 'name'=>'turnitin_mainteacher'))){
+                $configval = new stdClass();
+                $configval->cm = $cm->id;
+                $configval->name = 'turnitin_mainteacher';
+                $configval->value = (string) $user->id;
+                $DB->insert_record('plagiarism_turnitin_config', $configval);
+            }
             // save assignid
-            $configval = new stdClass();
-            $configval->cm = $cm->id;
-            $configval->name = 'turnitin_assignid';
-            $configval->value = (string) $tiixml->assignmentid[0];
-            $DB->insert_record('plagiarism_turnitin_config', $configval);
+            if (!$DB->record_exists('plagiarism_turnitin_config', array('cm'=>$cm->id, 'name'=>'turnitin_assignid'))){
+                $configval = new stdClass();
+                $configval->cm = $cm->id;
+                $configval->name = 'turnitin_assignid';
+                $configval->value = (string) $tiixml->assignmentid[0];
+                $DB->insert_record('plagiarism_turnitin_config', $configval);
+            }
             // save assign, needed if Moodle assignment title changed
-            $configval = new stdClass();
-            $configval->cm = $cm->id;
-            $configval->name = 'turnitin_assign';
-            $configval->value = (string) $tii['assign'];
-            $DB->insert_record('plagiarism_turnitin_config', $configval);
+            if (!$DB->record_exists('plagiarism_turnitin_config', array('cm'=>$cm->id, 'name'=>'turnitin_assign'))){
+                $configval = new stdClass();
+                $configval->cm = $cm->id;
+                $configval->name = 'turnitin_assign';
+                $configval->value = (string) $tii['assign'];
+                $DB->insert_record('plagiarism_turnitin_config', $configval);
+            }
             // save dtstart as epoch will be compared against time()
-            $configval = new stdClass();
-            $configval->cm = $cm->id;
-            $configval->name = 'turnitin_dtstart';
-            $configval->value = (string) $dtstart;
-            $DB->insert_record('plagiarism_turnitin_config', $configval);
+            if (!$DB->record_exists('plagiarism_turnitin_config', array('cm'=>$cm->id, 'name'=>'turnitin_dtstart'))){
+                $configval = new stdClass();
+                $configval->cm = $cm->id;
+                $configval->name = 'turnitin_dtstart';
+                $configval->value = (string) $dtstart;
+                $DB->insert_record('plagiarism_turnitin_config', $configval);
+            }
             mtrace('assignment created on Turnitin: '.$tiixml->assignmentid[0]);
         } else {
             mtrace('Error: '.$tiixml->rcode[0].' '.$tiixml->rmessage. ' [' .$tii['assign']. ']');
