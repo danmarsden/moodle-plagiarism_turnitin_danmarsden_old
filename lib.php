@@ -528,16 +528,16 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
                 mtrace("Warning: assignment start time is too early ".date('Y-m-d H:i:s', $assignmentstarttime)." cmid:". $eventdata->cmid." will delay sending files until next cron");
                 return false;
             }
-			
+
 			if($files = $eventdata->files) {
 				$result = true;
 				mtrace("processing event files");
 				foreach ($files as $file) {
-                    $fileresult = false;
-                    //TODO: need to check if this file has already been sent! - possible that the file was sent before draft submit was set.
                     $pid = plagiarism_update_record($cmid, $eventdata->userid, $file->get_pathnamehash());
                     if (!empty($pid)) {
                         $fileresult = turnitin_send_file($pid, $plagiarismsettings, $file);
+                    } else {
+                        $fileresult = true; // Already sent.
                     }
                     $result = $fileresult && $result;
                 }
@@ -553,7 +553,7 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
                 // This is a 'finalize' event - assignment-focused functionality
                 mtrace("finalise");
                 if (isset($plagiarismvalues['plagiarism_draft_submit'])
-                        && $plagiarismvalues['plagiarism_draft_submit'] == PLAGIARISM_TII_DRAFTSUBMIT_FINAL) {					
+                        && $plagiarismvalues['plagiarism_draft_submit'] == PLAGIARISM_TII_DRAFTSUBMIT_FINAL) {
                     // Drafts haven't previously been sent
                     // get assignment details, list of draft files and submit to TII.
                     require_once("$CFG->dirroot/mod/$modulename/lib.php");
@@ -565,12 +565,13 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
                     $fs = get_file_storage();
 					if ($files = $fs->get_area_files($modulecontext->id, 'mod_'.$modulename, 'submission', $submission->id, "timemodified", false)) {
                         mtrace("files");
+                        $result = true;
 						foreach ($files as $file) {
-                            $fileresult = false;
-                            //TODO: need to check if this file has already been sent! - possible that the file was sent before draft submit was set.
                             $pid = plagiarism_update_record($cmid, $eventdata->userid, $file->get_pathnamehash());
                             if (!empty($pid)) {
                                 $fileresult = turnitin_send_file($pid, $plagiarismsettings, $file);
+                            } else {
+                                $fileresult = true; // Already sent.
                             }
                             $result = $fileresult && $result;
                         }
@@ -1469,14 +1470,13 @@ function plagiarism_get_xml($url) {
     }
 }
 
-
-
 /**
  * updates a turnitin_files record
  *
  * @param int $cmid  - course module id
  * @param int $userid  - user id
  * @param varied $identifier  - identifier for this plagiarism record - hash of file, id of quiz question etc
+ * @param int $attempt
  * @return int - id of turnitin_files record
  */
 function plagiarism_update_record($cmid, $userid, $identifier, $attempt=0) {
@@ -1495,6 +1495,7 @@ function plagiarism_update_record($cmid, $userid, $identifier, $attempt=0) {
         if ($plagiarism_file->statuscode != 'pending' &&
             $plagiarism_file->statuscode != 'success' &&
             $plagiarism_file->statuscode != TURNITIN_RESP_PAPER_SENT) {
+
             $plagiarism_file->statuscode = 'pending';
             $plagiarism_file->similarityscore ='0';
             $plagiarism_file->attempt = $attempt;
