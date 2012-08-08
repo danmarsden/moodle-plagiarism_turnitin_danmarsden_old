@@ -958,7 +958,10 @@ function turnitin_send_file($pid, $plagiarismsettings, $file) {
     $tii['fid']      = TURNITIN_CREATE_USER;
     $tiixml = plagiarism_get_xml(turnitin_get_url($tii, $plagiarismsettings, false, $pid));
     if (empty($tiixml->rcode[0]) or $tiixml->rcode[0] <> TURNITIN_RESP_USER_CREATED) { //this is the success code for uploading a file. - we need to return the oid and save it!
-         mtrace('could not create user/login to turnitin code:'.$tiixml->rcode[0]);
+        mtrace('could not create user/login to turnitin code:'.$tiixml->rcode[0].' '.$tiixml->rmessage);
+        turnitin_end_session($user, $plagiarismsettings, $tiisession);
+
+        return false; // Retry.
     } else {
         $plagiarism_file = $DB->get_record('plagiarism_turnitin_files', array('id'=>$pid)); //make sure we get latest record as it may have changed
         $plagiarism_file->statuscode = (string)$tiixml->rcode[0];
@@ -978,7 +981,10 @@ function turnitin_send_file($pid, $plagiarismsettings, $file) {
         //$tii2['diagnostic'] = '1';
         $tiixml = plagiarism_get_xml(turnitin_get_url($tii, $plagiarismsettings, false, $pid));
         if (empty($tiixml->rcode[0]) or $tiixml->rcode[0] <> TURNITIN_RESP_USER_JOINED) { //this is the success code for uploading a file. - we need to return the oid and save it!
-            mtrace('could not enrol user in turnitin class code:'.$tiixml->rcode[0]);
+            mtrace('could not enrol user in turnitin class code:'.$tiixml->rcode[0].' '.$tiixml->rmessage);
+            turnitin_end_session($user, $plagiarismsettings, $tiisession);
+
+            return false; // Retry.
         } else {
             $plagiarism_file = $DB->get_record('plagiarism_turnitin_files', array('id'=>$pid)); //make sure we get latest record as it may have changed
             $plagiarism_file->statuscode = (string)$tiixml->rcode[0];
@@ -1013,11 +1019,13 @@ function turnitin_send_file($pid, $plagiarismsettings, $file) {
             if (! $DB->update_record('plagiarism_turnitin_files', $plagiarism_file)) {
                 debugging("Error updating turnitin_files record");
             }
+
             turnitin_end_session($user, $plagiarismsettings, $tiisession);
 
-            return $tiixml;
+            return true;
         }
     }
+
 }
 /**
  * used to obtain similarity scores from Turnitin for submitted files.
