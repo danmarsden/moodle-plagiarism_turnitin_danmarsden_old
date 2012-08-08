@@ -919,20 +919,21 @@ function turnitin_send_file($pid, $plagiarismsettings, $file) {
     //get information about this file
     $plagiarism_file = $DB->get_record('plagiarism_turnitin_files', array('id'=>$pid));
     $invalidrecord = false;
-    if (!$user = $DB->get_record('user', array('id'=>$plagiarism_file->userid))) {
-        debugging("invalid userid! - userid:".$plagiarism_file->userid." Module:".$moduletype." Fileid:".$plagiarism_file->id);
-        $invalidrecord = true;
-    }
+
     if (!$cm = $DB->get_record('course_modules', array('id'=>$plagiarism_file->cm))) {
         debugging("invalid cmid! ".$plagiarism_file->cm." Fileid:".$plagiarism_file->id);
+        $invalidrecord = true;
+    }
+    if (!$moduletype = $DB->get_field('modules', 'name', array('id' => $cm->module))) {
+        debugging("invalid moduleid! - moduleid:".$cm->module." Module:".$moduletype." Fileid:".$plagiarism_file->id);
         $invalidrecord = true;
     }
     if (!$course = $DB->get_record('course', array('id'=>$cm->course))) {
         debugging("invalid cmid! - courseid:".$cm->course." Module:".$moduletype." Fileid:".$plagiarism_file->id);
         $invalidrecord = true;
     }
-    if (!$moduletype = $DB->get_field('modules', 'name', array('id'=>$cm->module))) {
-        debugging("invalid moduleid! - moduleid:".$cm->module." Module:".$moduletype." Fileid:".$plagiarism_file->id);
+    if (!$user = $DB->get_record('user', array('id' => $plagiarism_file->userid))) {
+        debugging("invalid userid! - userid:".$plagiarism_file->userid." Module:".$moduletype." Fileid:".$plagiarism_file->id);
         $invalidrecord = true;
     }
     if (!$module = $DB->get_record($moduletype, array('id'=>$cm->instance))) {
