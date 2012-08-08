@@ -906,6 +906,10 @@ function turnitin_end_session($user, $plagiarismsettings, $tiisession) {
  * $pid - id of this record from turnitin_files table
  * $file - contains actual file object
  *
+ * @param int $pid
+ * @param array $plagiarismsettings
+ * @param stored_file $file
+ * @return bool true means done - event can be removed from queue.
  */
 function turnitin_send_file($pid, $plagiarismsettings, $file) {
     global $DB, $CFG;
@@ -937,7 +941,7 @@ function turnitin_send_file($pid, $plagiarismsettings, $file) {
     }
     if ($invalidrecord) {
         $DB->delete_records('plagiarism_turnitin_files', array('id'=>$plagiarism_file->id));
-        return true;
+        return true; // Do not reattempt - no hope of success.
     }
     $dtstart = $DB->get_record('plagiarism_turnitin_config', array('cm' => $cm->id, 'name' => 'turnitin_dtstart'));
     if (!empty($dtstart) && $dtstart->value > time()) {
