@@ -473,6 +473,10 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
             && !empty($plagiarismsettings['turnitin_attemptcodes'])) {
 
             $attemptcodes = explode(',', trim($plagiarismsettings['turnitin_attemptcodes']));
+            // In case people have used whitespace in their list of comma separated values.
+            foreach ($attemptcodes as &$code) {
+                $code = trim($code);
+            }
             list($usql, $params) = $DB->get_in_or_equal($attemptcodes);
             $sql = "SELECT tf.*
                     FROM {plagiarism_turnitin_files} tf, {course_modules} cm
