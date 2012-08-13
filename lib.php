@@ -567,21 +567,6 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
                 return false;
             }
 
-            if($files = $eventdata->files) {
-                $result = true;
-                mtrace("processing event files");
-                foreach ($files as $file) {
-                    $pid = plagiarism_update_record($cmid, $eventdata->userid, $file->get_pathnamehash());
-                    if (!empty($pid)) {
-                        $fileresult = turnitin_send_file($pid, $plagiarismsettings, $file);
-                    } else {
-                        $fileresult = true; // Already sent.
-                    }
-                    $result = $fileresult && $result;
-                }
-                return $result;
-            }
-
             if (empty($eventdata->pathnamehashes)) {
                 // There are no files attached to this 'fileuploaded' event.
                 // This is a 'finalize' event - assignment-focused functionality
