@@ -82,8 +82,15 @@ define('TURNITIN_RESP_SCORE_NOT_READY', 415);
 global $CFG;
 require_once($CFG->dirroot.'/plagiarism/lib.php');
 
-///// Turnitin Class ////////////////////////////////////////////////////
+/**
+ * Turnitin Class.
+ */
 class plagiarism_plugin_turnitin extends plagiarism_plugin {
+
+    /**
+     * @param $linkarray
+     * @return string
+     */
     public function get_links($linkarray) {
         global $DB, $USER, $COURSE, $CFG;
         $cmid = $linkarray['cmid'];
@@ -124,7 +131,8 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
     }
 
     /**
-     * Get the information turnitin has about a file
+     * Get the information turnitin has about a file.
+     *
      * @param int $cmid the id of the coursemodule file was submitted for
      * @param int $userid the id of the user who submitted the file
      * @param stored_file $file file object describing a moodle file which was submited to TII
@@ -209,6 +217,9 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
         return $results;
     }
 
+    /**
+     * @param $data
+     */
     public function save_form_elements($data) {
             global $DB;
         if (!$this->get_settings()) {
@@ -235,6 +246,10 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
         }
     }
 
+    /**
+     * @param object $mform
+     * @param object $context
+     */
     public function get_form_elements_module($mform, $context) {
         global $CFG, $DB;
         if (!$this->get_settings()) {
@@ -277,6 +292,10 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
         }
     }
 
+    /**
+     * @param int $cmid
+     * @return string
+     */
     public function print_disclosure($cmid) {
         global $DB, $OUTPUT;
 
@@ -298,6 +317,7 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
         }
         return $outputhtml;
     }
+
     /**
      * This function should be used to initialise settings and check if plagiarism is enabled
      * *
@@ -317,6 +337,10 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
             return false;
         }
     }
+
+    /**
+     * @return array
+     */
     public function config_options() {
         return array('use_turnitin', 'plagiarism_show_student_score', 'plagiarism_show_student_report',
                      'plagiarism_draft_submit', 'plagiarism_compare_student_papers', 'plagiarism_compare_internet',
@@ -325,6 +349,11 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
                      'plagiarism_exclude_matches_value', 'plagiarism_anonymity');
     }
 
+    /**
+     * @param object $course
+     * @param object $cm
+     * @return string|void
+     */
     public function update_status($course, $cm) {
         global $DB, $USER, $OUTPUT;
 
@@ -457,9 +486,9 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
         }
         return $outputhtml;
     }
+
     /**
      * used by admin/cron.php to get similarity scores from submitted files.
-     *
      */
     public function cron() {
         global $CFG, $DB;
@@ -473,6 +502,10 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
             && !empty($plagiarismsettings['turnitin_attemptcodes'])) {
 
             $attemptcodes = explode(',', trim($plagiarismsettings['turnitin_attemptcodes']));
+            // In case people have used whitespace in their list of comma separated values.
+            foreach ($attemptcodes as &$code) {
+                $code = trim($code);
+            }
             list($usql, $params) = $DB->get_in_or_equal($attemptcodes);
             $sql = "SELECT tf.*
                     FROM {plagiarism_turnitin_files} tf, {course_modules} cm
@@ -493,6 +526,11 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
             }
         }
     }
+
+    /**
+     * @param $eventdata
+     * @return bool
+     */
     public function event_handler($eventdata) {
         global $DB, $CFG;
         $plagiarismsettings = $this->get_settings();
@@ -545,13 +583,17 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
                     $modulecontext = get_context_instance(CONTEXT_MODULE, $eventdata->cmid);
                     $fs = get_file_storage();
                     $result = true;
-                    if ($files = $fs->get_area_files($modulecontext->id, 'mod_'.$modulename, 'submission', $submission->id, "timemodified", false)) {
+                    $files = $fs->get_area_files($modulecontext->id, 'mod_'.$modulename,
+                                                 'submission', $submission->id, "timemodified", false);
+                    if ($files) {
+                        mtrace("files");
                         foreach ($files as $file) {
-                            $fileresult = false;
-                            //TODO: need to check if this file has already been sent! - possible that the file was sent before draft submit was set.
+                            /* @var stored_file $file */
                             $pid = plagiarism_update_record($cmid, $eventdata->userid, $file->get_pathnamehash());
                             if (!empty($pid)) {
                                 $fileresult = turnitin_send_file($pid, $plagiarismsettings, $file);
+                            } else {
+                                $fileresult = true; // Already sent.
                             }
                             $result = $fileresult && $result;
                         }
@@ -633,10 +675,12 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
 //functions specific to the Turnitin plagiarism tool
 
 /**
- * generates a url including md5 for use in posting to Turnitin API.
+ * Generates a url including md5 for use in posting to Turnitin API.
  *
- * @param object $tii the intial $tii object
+ * @param array $tii the intial $tii object
+ * @param array $plagiarismsettings
  * @param bool $returnarray - if true, returns a formatted $tii object, if false returns a url.
+ * @param string $pid
  * @return mixed - array or url depending on $returnarray.
  */
 function turnitin_get_url($tii, $plagiarismsettings, $returnarray=false, $pid='') {
@@ -766,7 +810,8 @@ function turnitin_get_gmtime() {
 /**
  * internal function that generates an md5 based on particular items in a $tii array - used by turnitin_get_url
  *
- * @param object $tii the intial $tii object
+ * @param array $tii the initial $tii object
+ * @param array $plagiarismsettings
  * @return string - calculated md5
  */
 function turnitin_get_md5string($tii, $plagiarismsettings) {
@@ -806,15 +851,18 @@ function turnitin_get_md5string($tii, $plagiarismsettings) {
     return md5($md5string);
 }
 
-
 /**
  * post data to TII
  *
- * @param object $tii - the object containing all the settings required.
- * @return xml
+ * @param array $tii - the object containing all the settings required.
+ * @param $plagiarismsettings
+ * @param string $file
+ * @param string $pid
+ * @return string xml
  */
 function turnitin_post_data($tii, $plagiarismsettings, $file='', $pid='') {
-    global $DB, $CFG;
+    global $CFG;
+
     $fields = turnitin_get_url($tii, $plagiarismsettings, 'array', $pid);
     $url = get_config('plagiarism', 'turnitin_api');
     $status = check_dir_exists($CFG->dataroot."/plagiarism/", true);
@@ -846,7 +894,8 @@ function turnitin_post_data($tii, $plagiarismsettings, $file='', $pid='') {
 /**
  * Function that starts Turnitin session - some api calls require this
  *
- * @param object  $plagiarismsettings - from a call to plagiarism_get_settings
+ * @param $user
+ * @param array  $plagiarismsettings - from a call to plagiarism_get_settings
  * @return string - Turnitin sessionid
  */
 function turnitin_start_session($user, $plagiarismsettings) {
@@ -864,11 +913,13 @@ function turnitin_start_session($user, $plagiarismsettings) {
         return '';
     }
 }
+
 /**
  * Function that ends a Turnitin session
  *
- * @param object  $plagiarismsettings - from a call to plagiarism_get_settings
- * @param string - Turnitin sessionid - from a call to turnitin_start_session
+ * @param $user
+ * @param array  $plagiarismsettings - from a call to plagiarism_get_settings
+ * @param string $tiisession Turnitin sessionid - from a call to turnitin_start_session
  */
 
 function turnitin_end_session($user, $plagiarismsettings, $tiisession) {
@@ -890,6 +941,10 @@ function turnitin_end_session($user, $plagiarismsettings, $tiisession) {
  * $pid - id of this record from turnitin_files table
  * $file - contains actual file object
  *
+ * @param int $pid
+ * @param array $plagiarismsettings
+ * @param stored_file $file
+ * @return bool true means done - event can be removed from queue.
  */
 function turnitin_send_file($pid, $plagiarismsettings, $file) {
     global $DB, $CFG;
@@ -898,20 +953,21 @@ function turnitin_send_file($pid, $plagiarismsettings, $file) {
     //get information about this file
     $plagiarism_file = $DB->get_record('plagiarism_turnitin_files', array('id'=>$pid));
     $invalidrecord = false;
-    if (!$user = $DB->get_record('user', array('id'=>$plagiarism_file->userid))) {
-        debugging("invalid userid! - userid:".$plagiarism_file->userid." Module:".$moduletype." Fileid:".$plagiarism_file->id);
-        $invalidrecord = true;
-    }
+
     if (!$cm = $DB->get_record('course_modules', array('id'=>$plagiarism_file->cm))) {
         debugging("invalid cmid! ".$plagiarism_file->cm." Fileid:".$plagiarism_file->id);
+        $invalidrecord = true;
+    }
+    if (!$moduletype = $DB->get_field('modules', 'name', array('id' => $cm->module))) {
+        debugging("invalid moduleid! - moduleid:".$cm->module." Module:".$moduletype." Fileid:".$plagiarism_file->id);
         $invalidrecord = true;
     }
     if (!$course = $DB->get_record('course', array('id'=>$cm->course))) {
         debugging("invalid cmid! - courseid:".$cm->course." Module:".$moduletype." Fileid:".$plagiarism_file->id);
         $invalidrecord = true;
     }
-    if (!$moduletype = $DB->get_field('modules', 'name', array('id'=>$cm->module))) {
-        debugging("invalid moduleid! - moduleid:".$cm->module." Module:".$moduletype." Fileid:".$plagiarism_file->id);
+    if (!$user = $DB->get_record('user', array('id' => $plagiarism_file->userid))) {
+        debugging("invalid userid! - userid:".$plagiarism_file->userid." Module:".$moduletype." Fileid:".$plagiarism_file->id);
         $invalidrecord = true;
     }
     if (!$module = $DB->get_record($moduletype, array('id'=>$cm->instance))) {
@@ -920,16 +976,17 @@ function turnitin_send_file($pid, $plagiarismsettings, $file) {
     }
     if ($invalidrecord) {
         $DB->delete_records('plagiarism_turnitin_files', array('id'=>$plagiarism_file->id));
-        return true;
+        return true; // Do not reattempt - no hope of success.
     }
     $dtstart = $DB->get_record('plagiarism_turnitin_config', array('cm' => $cm->id, 'name' => 'turnitin_dtstart'));
     if (!empty($dtstart) && $dtstart->value > time()) {
         mtrace("Warning: $moduletype start date is too early ".date('Y-m-d H:i:s', $dtstart->value)." in course $course->shortname $moduletype $module->name will delay sending files until next cron");
         return false; //TODO: check that this doesn't cause a failure in cron
     }
-    //Start Turnitin Session
+    // Start Turnitin Session
     $tiisession = turnitin_start_session($user, $plagiarismsettings);
-    //now send the file.
+
+    // Basic data to send.
     $tii = array();
     $tii['utp']      = TURNITIN_STUDENT;
     $tii = turnitin_get_tii_user($tii, $user);
@@ -938,76 +995,98 @@ function turnitin_send_file($pid, $plagiarismsettings, $file) {
     $tii['ctl']      = (strlen($tii['ctl']) > 5 ? $tii['ctl'] : $tii['ctl']."_____");
     $tii['fcmd']     = TURNITIN_RETURN_XML;
     $tii['session-id'] = $tiisession;
-    //$tii2['diagnostic'] = '1';
+    //$tii['diagnostic'] = '1';
+
+    // Try to create or log in the student.
     $tii['fid']      = TURNITIN_CREATE_USER;
     $tiixml = plagiarism_get_xml(turnitin_get_url($tii, $plagiarismsettings, false, $pid));
+
+    // Store the status code if it's there so that cron can handle the resubmissions based on the code and
+    // the event queue is kept clear.
+    if (isset($tiixml->rcode[0])) {
+        turnitin_update_file_status_code($pid, $tiixml->rcode[0]);
+    }
     if (empty($tiixml->rcode[0]) or $tiixml->rcode[0] <> TURNITIN_RESP_USER_CREATED) { //this is the success code for uploading a file. - we need to return the oid and save it!
-         //probably 423 error, record so can track down and get tii to fix
-         $plagiarism_file->statuscode = (string) $tiixml->rcode[0];
-         if (! $DB->update_record('plagiarism_turnitin_files', $plagiarism_file)) {
-             debugging("Error updating turnitin_files record");
-         }
-         mtrace('Error: '.$tiixml->rcode[0].' '.$tiixml->rmessage[0]);
-    } else {
-        $plagiarism_file = $DB->get_record('plagiarism_turnitin_files', array('id'=>$pid)); //make sure we get latest record as it may have changed
-        $plagiarism_file->statuscode = (string)$tiixml->rcode[0];
+        // Probably 423 error, record so can track down and get tii to fix.
+        $plagiarism_file->statuscode = (string) $tiixml->rcode[0];
         if (! $DB->update_record('plagiarism_turnitin_files', $plagiarism_file)) {
             debugging("Error updating turnitin_files record");
         }
-
-        //now enrol user in class under the given account (fid=3)
-        $params = array('cm' => $cm->id, 'name' => 'turnitin_assignid');
-        $turnitin_assignid = $DB->get_field('plagiarism_turnitin_config', 'value', $params);
-
-        if (!empty($turnitin_assignid)) {
-            $tii['assignid'] = $turnitin_assignid;
-        }
-        $tii['assign']   = turnitin_get_assign_name($module->name, $cm->id); //assignment name stored in TII
-        $tii['fid']      = TURNITIN_JOIN_CLASS;
-        //$tii2['diagnostic'] = '1';
-        $tiixml = plagiarism_get_xml(turnitin_get_url($tii, $plagiarismsettings, false, $pid));
-        if (empty($tiixml->rcode[0]) or $tiixml->rcode[0] <> TURNITIN_RESP_USER_JOINED) { //this is the success code for uploading a file. - we need to return the oid and save it!
-            mtrace('could not enrol user in turnitin class code:'.$tiixml->rcode[0]);
-        } else {
-            $plagiarism_file = $DB->get_record('plagiarism_turnitin_files', array('id'=>$pid)); //make sure we get latest record as it may have changed
-            $plagiarism_file->statuscode = (string)$tiixml->rcode[0];
-            if (! $DB->update_record('plagiarism_turnitin_files', $plagiarism_file)) {
-                debugging("Error updating turnitin_files record");
-            }
-
-            //now submit this uploaded file to Tii! (fid=5)
-            $tii['fid']     = TURNITIN_SUBMIT_PAPER;
-            //if ($file->type == "tempturnitin") {
-            //    $tii['ptl']     = $file->filename; //paper title
-            //    $tii['submit_date'] = rawurlencode(gmdate('Y-m-d H:i:s', $file->timestamp));
-            //} else {
-                $tii['ptl']     = $file->get_filename(); //paper title
-                $tii['submit_date'] = rawurlencode(date('Y-m-d H:i:s', $file->get_timemodified()));
-            //}
-
-            $tii['ptype']   = '2'; //filetype
-            $tii['pfn']     = $tii['ufn'];
-            $tii['pln']     = $tii['uln'];
-            //$tii['diagnostic'] = '1';
-            $tiixml = turnitin_post_data($tii, $plagiarismsettings, $file, $pid);
-            if ($tiixml->rcode[0] == TURNITIN_RESP_PAPER_SENT) { //we need to return the oid and save it!
-                $plagiarism_file = $DB->get_record('plagiarism_turnitin_files', array('id'=>$pid)); //make sure we get latest record as it may have changed
-                $plagiarism_file->externalid = (string)$tiixml->objectID[0];
-                debugging("success uploading assignment", DEBUG_DEVELOPER);
-            } else {
-                $plagiarism_file = $DB->get_record('plagiarism_turnitin_files', array('id'=>$pid)); //make sure we get latest record as it may have changed
-                debugging("failed to upload assignment errorcode".$tiixml->rcode[0]);
-            }
-            $plagiarism_file->statuscode = (string)$tiixml->rcode[0];
-            if (! $DB->update_record('plagiarism_turnitin_files', $plagiarism_file)) {
-                debugging("Error updating turnitin_files record");
-            }
-            turnitin_end_session($user, $plagiarismsettings, $tiisession);
-
-            return $tiixml;
-        }
+        mtrace('could not create user/login to turnitin code:'.$tiixml->rcode[0].' '.$tiixml->rmessage);
+        turnitin_end_session($user, $plagiarismsettings, $tiisession);
+        return true;
     }
+
+    // Now try to enrol user in class under the given account (fid=3).
+    $params = array('cm' => $cm->id, 'name' => 'turnitin_assignid');
+    $turnitin_assignid = $DB->get_field('plagiarism_turnitin_config', 'value', $params);
+    if (!empty($turnitin_assignid)) {
+        $tii['assignid'] = $turnitin_assignid;
+    }
+    $tii['assign']   = turnitin_get_assign_name($module->name, $cm->id); //assignment name stored in TII
+    $tii['fid']      = TURNITIN_JOIN_CLASS;
+    //$tii['diagnostic'] = '1';
+    $tiixml = plagiarism_get_xml(turnitin_get_url($tii, $plagiarismsettings, false, $pid));
+
+    // Deal with the response.
+    if (isset($tiixml->rcode[0])) {
+        turnitin_update_file_status_code($pid, $tiixml->rcode[0]);
+    }
+    if (empty($tiixml->rcode[0]) or $tiixml->rcode[0] <> TURNITIN_RESP_USER_JOINED) { //this is the success code for uploading a file. - we need to return the oid and save it!
+        mtrace('could not enrol user in turnitin class code:'.$tiixml->rcode[0].' '.$tiixml->rmessage);
+        turnitin_end_session($user, $plagiarismsettings, $tiisession);
+        return true;
+    }
+
+    // Now try to submit this uploaded file to Tii! (fid=5).
+    $tii['fid']     = TURNITIN_SUBMIT_PAPER;
+    $tii['ptl']     = $file->get_filename(); //paper title
+    $tii['submit_date'] = rawurlencode(date('Y-m-d H:i:s', $file->get_timemodified()));
+    $tii['ptype']   = '2'; //filetype
+    $tii['pfn']     = $tii['ufn'];
+    $tii['pln']     = $tii['uln'];
+    //$tii['diagnostic'] = '1';
+    $tiixml = turnitin_post_data($tii, $plagiarismsettings, $file, $pid);
+
+    if (isset($tiixml->rcode[0])) {
+        turnitin_update_file_status_code($pid, $tiixml->rcode[0]);
+    }
+    if ($tiixml->rcode[0] == TURNITIN_RESP_PAPER_SENT) { // We need to return the oid and save it!
+        $plagiarism_file = $DB->get_record('plagiarism_turnitin_files', array('id'=>$pid)); // Make sure we get latest record as it may have changed
+        $plagiarism_file->externalid = (string)$tiixml->objectID[0];
+        $DB->update_record('plagiarism_turnitin_files', $plagiarism_file);
+        debugging("success uploading assignment", DEBUG_DEVELOPER);
+>>>>>>> matt/fix-stalled-events
+    } else {
+        debugging("failed to upload assignment errorcode ".$tiixml->rcode[0].' '.$tiixml->rmessage);
+    }
+
+    turnitin_end_session($user, $plagiarismsettings, $tiisession);
+
+    return true;
+
 }
+
+/**
+ * Stores the status code returned from Turnitin in the plagiarism_turnitin_files record. Cron uses this to
+ * decide whether to resubmit.
+ *
+ * @param $pid
+ * @param $code
+ */
+function turnitin_update_file_status_code($pid, $code) {
+
+    global $DB;
+
+    $plagiarism_file = $DB->get_record('plagiarism_turnitin_files',
+                                       array('id' => $pid)); //make sure we get latest record as it may have changed
+    $plagiarism_file->statuscode = (string)$code;
+    if (!$DB->update_record('plagiarism_turnitin_files', $plagiarism_file)) {
+        debugging("Error updating turnitin_files record");
+    }
+
+}
+
 /**
  * used to obtain similarity scores from Turnitin for submitted files.
  *
@@ -1084,9 +1163,11 @@ function turnitin_get_scores($plagiarismsettings) {
 
 
 /**
- * given an error code, returns the description for this error
- * @param string statuscode The Error code.
+ * Given an error code, returns the description for this error.
+ *
+ * @param string $statuscode The Error code.
  * @param boolean $notify if true, returns a notify call - otherwise just returns the text of the error.
+ * @return string
  */
 function turnitin_error_text($statuscode, $notify=true) {
     global $OUTPUT;
@@ -1115,11 +1196,11 @@ function turnitin_error_text($statuscode, $notify=true) {
 /**
  * creates the class and assignment within Turnitin - used by event handlers.
  *
- * @global type $DB
- * @param type array $plagiarismsettings
- * @param type array $plagiarismvalues
- * @param type $eventdata
- * @return boolean $result
+ * @param array $plagiarismsettings
+ * @param array $plagiarismvalues
+ * @param object $eventdata - data returned in an Event
+ * @param string $action
+ * @return boolean  returns false if unexpected error occurs.
  */
 function turnitin_create_assignment($plagiarismsettings, $plagiarismvalues, $eventdata) {
     global $DB;
@@ -1473,9 +1554,9 @@ function turnitin_delete_assignment($plagiarismsettings, $plagiarismvalues, $eve
  * this function assumes that another process has already updated the grademark status
  *
  * @param object $plagiarismfile - record from plagiarsim_files table
- * @param object $course - course record
  * @param object $course - module record
- * @param object  $plagiarismsettings - from a call to plagiarism_get_settings
+ * @param stdClass $module
+ * @param array $plagiarismsettings - from a call to plagiarism_get_settings
  * @return string - link to grademark function including images.
  */
 function turnitin_get_grademark_link($plagiarismfile, $course, $module, $plagiarismsettings) {
@@ -1513,8 +1594,8 @@ function turnitin_get_grademark_link($plagiarismfile, $course, $module, $plagiar
 /**
  * Function that returns turnaround time for reports from Turnitin
  *
- * @param object  $plagiarismsettings - from a call to plagiarism_get_settings
- * @return xml - xml
+ * @param array $plagiarismsettings - from a call to plagiarism_get_settings
+ * @return string xml
  */
 function turnitin_get_responsetime($plagiarismsettings) {
     global $USER;
@@ -1528,9 +1609,9 @@ function turnitin_get_responsetime($plagiarismsettings) {
     return $tiixml;
 }
 /**
- * adds the list of plagiarism settings to a form
+ * Adds the list of plagiarism settings to a form
  *
- * @param object $mform - Moodle form object
+ * @param MoodleQuickForm $mform - Moodle form object
  */
 function turnitin_get_form_elements($mform) {
     $ynoptions = array( 0 => get_string('no'), 1 => get_string('yes'));
@@ -1577,7 +1658,7 @@ function turnitin_get_form_elements($mform) {
 }
 
 /**
- * generates a url to allow access to a similarity report. - helper functino for plagiarism_get_link
+ * Generates a url to allow access to a similarity report. - helper functino for plagiarism_get_link
  *
  * @param object  $file - single record from turnitin_files table
  * @param object  $course - usually global $COURSE value
@@ -1608,10 +1689,10 @@ function turnitin_get_report_link($file, $course, $plagiarismsettings) {
     return turnitin_get_url($tii, $plagiarismsettings);
 }
 /**
- * internal function that returns xml when provided a URL
+ * Internal function that returns xml when provided a URL
  *
  * @param string $url the url being passed.
- * @return xml
+ * @return string xml
  */
 function plagiarism_get_xml($url) {
     global $CFG;
@@ -1625,14 +1706,13 @@ function plagiarism_get_xml($url) {
     }
 }
 
-
-
 /**
- * updates a turnitin_files record
+ * Updates a turnitin_files record
  *
  * @param int $cmid  - course module id
  * @param int $userid  - user id
- * @param varied $identifier  - identifier for this plagiarism record - hash of file, id of quiz question etc
+ * @param mixed $identifier  - identifier for this plagiarism record - hash of file, id of quiz question etc
+ * @param int $attempt
  * @return int - id of turnitin_files record
  */
 function plagiarism_update_record($cmid, $userid, $identifier, $attempt=0) {
@@ -1651,6 +1731,7 @@ function plagiarism_update_record($cmid, $userid, $identifier, $attempt=0) {
         if ($plagiarism_file->statuscode != 'pending' &&
             $plagiarism_file->statuscode != 'success' &&
             $plagiarism_file->statuscode != TURNITIN_RESP_PAPER_SENT) {
+
             $plagiarism_file->statuscode = 'pending';
             $plagiarism_file->similarityscore ='0';
             $plagiarism_file->attempt = $attempt;
@@ -1674,7 +1755,8 @@ function plagiarism_update_record($cmid, $userid, $identifier, $attempt=0) {
 
 
 /**
- * Function that returns the name of the css class to use for a given similarity score
+ * Function that returns the name of the css class to use for a given similarity score.
+ *
  * @param integer $score - the similarity score
  * @return string - string name of css class
  */
@@ -1693,10 +1775,12 @@ function plagiarism_get_css_rank ($score) {
 
     return "rank$rank";
 }
+
 /**
- * Function used to add the user details to a Turnitin call
- * @param $tii array() $tii array passed to a get_url call
- * @param $plagiarismsettings array()  - plagiarism settings array
+ * Function used to add the user details to a Turnitin call.
+ *
+ * @param array $tii array() $tii array passed to a get_url call
+ * @param stdClass|int $user
  * @return string - string name of css class
  */
 function turnitin_get_tii_user($tii, $user) {
@@ -1714,29 +1798,50 @@ function turnitin_get_tii_user($tii, $user) {
     return $tii;
 }
 
+/**
+ * @param $eventdata
+ * @return bool
+ */
 function turnitin_event_file_uploaded($eventdata) {
     $eventdata->eventtype = 'file_uploaded';
     $turnitin = new plagiarism_plugin_turnitin();
     return $turnitin->event_handler($eventdata);
 }
+
+/**
+ * @param $eventdata
+ * @return bool
+ */
 function turnitin_event_files_done($eventdata) {
     $eventdata->eventtype = 'file_uploaded';
     $turnitin = new plagiarism_plugin_turnitin();
     return $turnitin->event_handler($eventdata);
 }
 
+/**
+ * @param $eventdata
+ * @return bool
+ */
 function turnitin_event_mod_created($eventdata) {
     $eventdata->eventtype = 'mod_created';
     $turnitin = new plagiarism_plugin_turnitin();
     return $turnitin->event_handler($eventdata);
 }
 
+/**
+ * @param $eventdata
+ * @return bool
+ */
 function turnitin_event_mod_updated($eventdata) {
     $eventdata->eventtype = 'mod_updated';
     $turnitin = new plagiarism_plugin_turnitin();
     return $turnitin->event_handler($eventdata);
 }
 
+/**
+ * @param $eventdata
+ * @return bool
+ */
 function turnitin_event_mod_deleted($eventdata) {
     $eventdata->eventtype = 'mod_deleted';
     $turnitin = new plagiarism_plugin_turnitin();
