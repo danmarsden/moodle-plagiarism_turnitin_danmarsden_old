@@ -582,9 +582,9 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
                     $submission = $assignmentbase->get_submission($eventdata->userid);
                     $modulecontext = get_context_instance(CONTEXT_MODULE, $eventdata->cmid);
                     $fs = get_file_storage();
+                    $result = true;
                     if ($files = $fs->get_area_files($modulecontext->id, 'mod_'.$modulename, 'submission', $submission->id, "timemodified", false)) {
                         mtrace("files");
-                        $result = true;
                         foreach ($files as $file) {
                             $pid = plagiarism_update_record($cmid, $eventdata->userid, $file->get_pathnamehash());
                             if (!empty($pid)) {
