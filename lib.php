@@ -533,10 +533,10 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
                 return false;
             }
 
-			if($files = $eventdata->files) {
-				$result = true;
-				mtrace("processing event files");
-				foreach ($files as $file) {
+            if($files = $eventdata->files) {
+                $result = true;
+                mtrace("processing event files");
+                foreach ($files as $file) {
                     $pid = plagiarism_update_record($cmid, $eventdata->userid, $file->get_pathnamehash());
                     if (!empty($pid)) {
                         $fileresult = turnitin_send_file($pid, $plagiarismsettings, $file);
@@ -545,8 +545,8 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
                     }
                     $result = $fileresult && $result;
                 }
-				return $result;
-			}
+                return $result;
+            }
 
             if (empty($eventdata->pathnamehashes)) {
                 // There are no files attached to this 'fileuploaded' event.
@@ -563,10 +563,10 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
                     $submission = $assignmentbase->get_submission($eventdata->userid);
                     $modulecontext = get_context_instance(CONTEXT_MODULE, $eventdata->cmid);
                     $fs = get_file_storage();
-					if ($files = $fs->get_area_files($modulecontext->id, 'mod_'.$modulename, 'submission', $submission->id, "timemodified", false)) {
+                    if ($files = $fs->get_area_files($modulecontext->id, 'mod_'.$modulename, 'submission', $submission->id, "timemodified", false)) {
                         mtrace("files");
                         $result = true;
-						foreach ($files as $file) {
+                        foreach ($files as $file) {
                             $pid = plagiarism_update_record($cmid, $eventdata->userid, $file->get_pathnamehash());
                             if (!empty($pid)) {
                                 $fileresult = turnitin_send_file($pid, $plagiarismsettings, $file);
