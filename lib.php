@@ -82,8 +82,15 @@ define('TURNITIN_RESP_SCORE_NOT_READY', 415);
 global $CFG;
 require_once($CFG->dirroot.'/plagiarism/lib.php');
 
-///// Turnitin Class ////////////////////////////////////////////////////
+/**
+ * Turnitin Class.
+ */
 class plagiarism_plugin_turnitin extends plagiarism_plugin {
+
+    /**
+     * @param $linkarray
+     * @return string
+     */
     public function get_links($linkarray) {
         global $DB, $USER, $COURSE, $CFG;
         $cmid = $linkarray['cmid'];
@@ -124,7 +131,8 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
     }
 
     /**
-     * Get the information turnitin has about a file
+     * Get the information turnitin has about a file.
+     *
      * @param int $cmid the id of the coursemodule file was submitted for
      * @param int $userid the id of the user who submitted the file
      * @param stored_file $file file object describing a moodle file which was submited to TII
@@ -209,6 +217,9 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
         return $results;
     }
 
+    /**
+     * @param $data
+     */
     public function save_form_elements($data) {
             global $DB;
         if (!$this->get_settings()) {
@@ -235,6 +246,10 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
         }
     }
 
+    /**
+     * @param object $mform
+     * @param object $context
+     */
     public function get_form_elements_module($mform, $context) {
         global $CFG, $DB;
         if (!$this->get_settings()) {
@@ -277,6 +292,10 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
         }
     }
 
+    /**
+     * @param int $cmid
+     * @return string
+     */
     public function print_disclosure($cmid) {
         global $DB, $OUTPUT;
 
@@ -298,6 +317,7 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
         }
         return $outputhtml;
     }
+
     /**
      * This function should be used to initialise settings and check if plagiarism is enabled
      * *
@@ -317,6 +337,10 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
             return false;
         }
     }
+
+    /**
+     * @return array
+     */
     public function config_options() {
         return array('use_turnitin', 'plagiarism_show_student_score', 'plagiarism_show_student_report',
                      'plagiarism_draft_submit', 'plagiarism_compare_student_papers', 'plagiarism_compare_internet',
@@ -325,6 +349,11 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
                      'plagiarism_exclude_matches_value', 'plagiarism_anonymity');
     }
 
+    /**
+     * @param object $course
+     * @param object $cm
+     * @return string|void
+     */
     public function update_status($course, $cm) {
         global $DB, $USER, $OUTPUT;
 
@@ -457,9 +486,9 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
         }
         return $outputhtml;
     }
+
     /**
      * used by admin/cron.php to get similarity scores from submitted files.
-     *
      */
     public function cron() {
         global $CFG, $DB;
@@ -497,6 +526,11 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
             }
         }
     }
+
+    /**
+     * @param $eventdata
+     * @return bool
+     */
     public function event_handler($eventdata) {
         global $DB, $CFG;
         $plagiarismsettings = $this->get_settings();
@@ -658,7 +692,7 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
 //functions specific to the Turnitin plagiarism tool
 
 /**
- * generates a url including md5 for use in posting to Turnitin API.
+ * Generates a url including md5 for use in posting to Turnitin API.
  *
  * @param array $tii the intial $tii object
  * @param array $plagiarismsettings
@@ -793,7 +827,8 @@ function turnitin_get_gmtime() {
 /**
  * internal function that generates an md5 based on particular items in a $tii array - used by turnitin_get_url
  *
- * @param object $tii the intial $tii object
+ * @param array $tii the initial $tii object
+ * @param array $plagiarismsettings
  * @return string - calculated md5
  */
 function turnitin_get_md5string($tii, $plagiarismsettings) {
@@ -876,7 +911,8 @@ function turnitin_post_data($tii, $plagiarismsettings, $file='', $pid='') {
 /**
  * Function that starts Turnitin session - some api calls require this
  *
- * @param object  $plagiarismsettings - from a call to plagiarism_get_settings
+ * @param $user
+ * @param array  $plagiarismsettings - from a call to plagiarism_get_settings
  * @return string - Turnitin sessionid
  */
 function turnitin_start_session($user, $plagiarismsettings) {
@@ -1138,9 +1174,11 @@ function turnitin_get_scores($plagiarismsettings) {
 
 
 /**
- * given an error code, returns the description for this error
- * @param string statuscode The Error code.
+ * Given an error code, returns the description for this error.
+ *
+ * @param string $statuscode The Error code.
  * @param boolean $notify if true, returns a notify call - otherwise just returns the text of the error.
+ * @return string
  */
 function turnitin_error_text($statuscode, $notify=true) {
     global $OUTPUT;
@@ -1169,7 +1207,10 @@ function turnitin_error_text($statuscode, $notify=true) {
 /**
  * creates/updates the assignment within Turnitin - used by event handlers.
  *
+ * @param array $plagiarismsettings
+ * @param array $plagiarismvalues
  * @param object $eventdata - data returned in an Event
+ * @param string $action
  * @return boolean  returns false if unexpected error occurs.
  */
 function turnitin_update_assignment($plagiarismsettings, $plagiarismvalues, $eventdata, $action) {
@@ -1356,9 +1397,9 @@ function turnitin_update_assignment($plagiarismsettings, $plagiarismvalues, $eve
  * this function assumes that another process has already updated the grademark status
  *
  * @param object $plagiarismfile - record from plagiarsim_files table
- * @param object $course - course record
  * @param object $course - module record
- * @param object  $plagiarismsettings - from a call to plagiarism_get_settings
+ * @param stdClass $module
+ * @param array $plagiarismsettings - from a call to plagiarism_get_settings
  * @return string - link to grademark function including images.
  */
 function turnitin_get_grademark_link($plagiarismfile, $course, $module, $plagiarismsettings) {
@@ -1396,8 +1437,8 @@ function turnitin_get_grademark_link($plagiarismfile, $course, $module, $plagiar
 /**
  * Function that returns turnaround time for reports from Turnitin
  *
- * @param object  $plagiarismsettings - from a call to plagiarism_get_settings
- * @return xml - xml
+ * @param array $plagiarismsettings - from a call to plagiarism_get_settings
+ * @return string xml
  */
 function turnitin_get_responsetime($plagiarismsettings) {
     global $USER;
@@ -1411,9 +1452,9 @@ function turnitin_get_responsetime($plagiarismsettings) {
     return $tiixml;
 }
 /**
- * adds the list of plagiarism settings to a form
+ * Adds the list of plagiarism settings to a form
  *
- * @param object $mform - Moodle form object
+ * @param MoodleQuickForm $mform - Moodle form object
  */
 function turnitin_get_form_elements($mform) {
     $ynoptions = array( 0 => get_string('no'), 1 => get_string('yes'));
@@ -1460,7 +1501,7 @@ function turnitin_get_form_elements($mform) {
 }
 
 /**
- * generates a url to allow access to a similarity report. - helper functino for plagiarism_get_link
+ * Generates a url to allow access to a similarity report. - helper functino for plagiarism_get_link
  *
  * @param object  $file - single record from turnitin_files table
  * @param object  $course - usually global $COURSE value
@@ -1491,10 +1532,10 @@ function turnitin_get_report_link($file, $course, $plagiarismsettings) {
     return turnitin_get_url($tii, $plagiarismsettings);
 }
 /**
- * internal function that returns xml when provided a URL
+ * Internal function that returns xml when provided a URL
  *
  * @param string $url the url being passed.
- * @return xml
+ * @return string xml
  */
 function plagiarism_get_xml($url) {
     global $CFG;
@@ -1509,11 +1550,11 @@ function plagiarism_get_xml($url) {
 }
 
 /**
- * updates a turnitin_files record
+ * Updates a turnitin_files record
  *
  * @param int $cmid  - course module id
  * @param int $userid  - user id
- * @param varied $identifier  - identifier for this plagiarism record - hash of file, id of quiz question etc
+ * @param mixed $identifier  - identifier for this plagiarism record - hash of file, id of quiz question etc
  * @param int $attempt
  * @return int - id of turnitin_files record
  */
@@ -1557,7 +1598,8 @@ function plagiarism_update_record($cmid, $userid, $identifier, $attempt=0) {
 
 
 /**
- * Function that returns the name of the css class to use for a given similarity score
+ * Function that returns the name of the css class to use for a given similarity score.
+ *
  * @param integer $score - the similarity score
  * @return string - string name of css class
  */
@@ -1576,10 +1618,12 @@ function plagiarism_get_css_rank ($score) {
 
     return "rank$rank";
 }
+
 /**
- * Function used to add the user details to a Turnitin call
- * @param $tii array() $tii array passed to a get_url call
- * @param $plagiarismsettings array()  - plagiarism settings array
+ * Function used to add the user details to a Turnitin call.
+ *
+ * @param array $tii array() $tii array passed to a get_url call
+ * @param stdClass|int $user
  * @return string - string name of css class
  */
 function turnitin_get_tii_user($tii, $user) {
@@ -1597,29 +1641,50 @@ function turnitin_get_tii_user($tii, $user) {
     return $tii;
 }
 
+/**
+ * @param $eventdata
+ * @return bool
+ */
 function turnitin_event_file_uploaded($eventdata) {
     $eventdata->eventtype = 'file_uploaded';
     $turnitin = new plagiarism_plugin_turnitin();
     return $turnitin->event_handler($eventdata);
 }
+
+/**
+ * @param $eventdata
+ * @return bool
+ */
 function turnitin_event_files_done($eventdata) {
     $eventdata->eventtype = 'file_uploaded';
     $turnitin = new plagiarism_plugin_turnitin();
     return $turnitin->event_handler($eventdata);
 }
 
+/**
+ * @param $eventdata
+ * @return bool
+ */
 function turnitin_event_mod_created($eventdata) {
     $eventdata->eventtype = 'mod_created';
     $turnitin = new plagiarism_plugin_turnitin();
     return $turnitin->event_handler($eventdata);
 }
 
+/**
+ * @param $eventdata
+ * @return bool
+ */
 function turnitin_event_mod_updated($eventdata) {
     $eventdata->eventtype = 'mod_updated';
     $turnitin = new plagiarism_plugin_turnitin();
     return $turnitin->event_handler($eventdata);
 }
 
+/**
+ * @param $eventdata
+ * @return bool
+ */
 function turnitin_event_mod_deleted($eventdata) {
     $eventdata->eventtype = 'mod_deleted';
     $turnitin = new plagiarism_plugin_turnitin();
