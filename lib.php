@@ -1056,7 +1056,6 @@ function turnitin_send_file($pid, $plagiarismsettings, $file) {
         $plagiarism_file->externalid = (string)$tiixml->objectID[0];
         $DB->update_record('plagiarism_turnitin_files', $plagiarism_file);
         debugging("success uploading assignment", DEBUG_DEVELOPER);
->>>>>>> matt/fix-stalled-events
     } else {
         debugging("failed to upload assignment errorcode ".$tiixml->rcode[0].' '.$tiixml->rmessage);
     }
