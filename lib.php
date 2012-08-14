@@ -655,12 +655,19 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
             }
             return $result;
         } else if ($eventdata->eventtype=="quizattempt") {
-            //get list of essay questions and the users answer in this quiz
-            $sql = "SELECT s.* FROM {question} q, {quiz_question_instances} i, {question_states} s, {question_sessions} qs
-                    WHERE i.quiz = ? AND i.quiz=q.id AND q.qtype='essay'
-                    AND s.question = q.id AND qs.questionid= q.id AND qs.newest = s.id AND qs.attemptid = s.attempt AND s.attempt = ?";
+            // Get list of essay questions and the users answer in this quiz.
+            $sql = "SELECT s.*
+                      FROM {question} q, {quiz_question_instances} i, {question_states} s, {question_sessions} qs
+                     WHERE i.quiz = ?
+                       AND i.quiz=q.id
+                       AND q.qtype='essay'
+                       AND s.question = q.id
+                       AND qs.questionid= q.id
+                       AND qs.newest = s.id
+                       AND qs.attemptid = s.attempt
+                       AND s.attempt = ?";
             $essayquestions = $DB->get_records_sql($sql, array($eventdata->quiz, $eventdata->attempt));
-            //check dir exists
+            // Check dir exists.
             if (!file_exists($CFG->dataroot."/temp/turnitin")) {
                 if (!file_exists($CFG->dataroot."/temp")) {
                     mkdir($CFG->dataroot."/temp", 0700);
@@ -668,8 +675,8 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
                 mkdir($CFG->dataroot."/temp/turnitin", 0700);
             }
             foreach ($essayquestions as $qid) {
-                //get actual response
-                //create file to send
+                // Get actual response.
+                // Create file to send.
                 $pid = plagiarism_update_record($cmid, $eventdata->userid, $qid->id);
                 if (!empty($pid)) {
                     $file = new stdclass();
@@ -677,21 +684,21 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
                     $file->filename = $pid .".txt";
                     $file->timestamp = $qid->timestamp;
                     $file->filepath =  $CFG->dataroot."/temp/turnitin/" . $pid .".txt";
-                    $fd = fopen($file->filepath, 'wb');   //create if not exist, write binary
+                    $fd = fopen($file->filepath, 'wb');  // Create if not exist, write binary.
                     fwrite( $fd, $qid->answer);
                     fclose( $fd );
                     $result = turnitin_send_file($pid, $plagiarismsettings, $file);
-                    unlink($file->filepath); //delete temp file.
+                    unlink($file->filepath); // Delete temp file.
                 }
             }
             return true;
         } else {
-            return true; //Don't need to handle this event
+            return true; // Don't need to handle this event.
         }
     }
 }
 
-//functions specific to the Turnitin plagiarism tool
+// Functions specific to the Turnitin plagiarism tool.
 
 /**
  * Generates a url including md5 for use in posting to Turnitin API.
@@ -705,10 +712,11 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
 function turnitin_get_url($tii, $plagiarismsettings, $returnarray=false, $pid='') {
     global $CFG, $DB;
 
-    //make sure all $tii values are clean.
+    // Make sure all $tii values are clean.
     foreach ($tii as $key => $value) {
         if (!empty($value) AND $key <> 'tem' AND $key <> 'uem' AND $key <> 'dtstart' AND $key <> 'dtdue' AND $key <> 'submit_date') {
-            $value = rawurldecode($value); //decode url first. (in case has already be encoded - don't want to end up with double % replacements)
+            // Decode url first. (in case has already be encoded - don't want to end up with double % replacements).
+            $value = rawurldecode($value);
             $value = rawurlencode($value);
             $value = str_replace('%20', '_', $value);
             $tii[$key] = $value;
@@ -716,9 +724,9 @@ function turnitin_get_url($tii, $plagiarismsettings, $returnarray=false, $pid=''
     }
     //TODO need to check lengths of certain vars. - some cannot be under 5 or over 50.
     if (isset($plagiarismsettings['turnitin_senduseremail']) && $plagiarismsettings['turnitin_senduseremail']) {
-        $tii['dis'] ='0'; //sets e-mail notification for users in tii system to enabled.
+        $tii['dis'] ='0'; // Ssets e-mail notification for users in tii system to enabled.
     } else {
-        $tii['dis'] ='1'; //sets e-mail notification for users in tii system to disabled.
+        $tii['dis'] ='1'; // Sets e-mail notification for users in tii system to disabled.
     }
     //set vars if not set.
     if (!isset($tii['encrypt'])) {
