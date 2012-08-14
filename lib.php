@@ -232,7 +232,7 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
             $params = array('cm' => $data->coursemodule);
             $existingelements = $DB->get_records_menu('plagiarism_turnitin_config', $params, '', 'name,id');
             foreach ($plagiarismelements as $element) {
-                $newelement = new object();
+                $newelement = new stdClass();
                 $newelement->cm = $data->coursemodule;
                 $newelement->name = $element;
                 $newelement->value = (isset($data->$element) ? $data->$element : 0);
@@ -368,7 +368,7 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
 
         $userprofilefieldname = 'turnitinteachercoursecache';
         if (!$plagiarismsettings = $this->get_settings()) {
-            return;
+            return '';
         }
 
         // If Turinitin has already been told about this user's rights in this course,
@@ -448,10 +448,11 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
         $tii['utp'] = TURNITIN_INSTRUCTOR;
         $tii['fid'] = TURNITIN_CREATE_USER; // Set commands - Administrator login/statistics.
         $tii = turnitin_get_tii_user($tii, $USER);
-        $outputhtml .= '<div style="text-align:right"><a href="'.turnitin_get_url($tii, $plagiarismsettings).'" target="_blank">'.get_string("teacherlogin","plagiarism_turnitin").'</a></div>';
+        $outputhtml .= '<div style="text-align:right"><a href="'.turnitin_get_url($tii, $plagiarismsettings).'" target="_blank">'.
+            get_string("teacherlogin", "plagiarism_turnitin").'</a></div>';
 
-        //currently only used for grademark - check if enabled and return if not.
-        //TODO: This call degrades page performance - need to run less frequently.
+        // Currently only used for grademark - check if enabled and return if not.
+        // TODO: This call degrades page performance - need to run less frequently.
         if (empty($plagiarismsettings['turnitin_enablegrademark'])) {
             return $outputhtml;
         }
@@ -462,23 +463,25 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
             debugging("invalid instanceid! - instance:".$cm->instance." Module:".$moduletype);
         }
 
-        //set globals.
+        // Set globals.
         $tii['utp']      = TURNITIN_INSTRUCTOR;
         $tii = turnitin_get_tii_user($tii, $USER);
-        $tii['cid']      = get_config('plagiarism_turnitin_course', $course->id); //course ID
+        $tii['cid']      = get_config('plagiarism_turnitin_course', $course->id); // Course ID.
         $tii['ctl']      = (strlen($course->shortname) > 45 ? substr($course->shortname, 0, 45) : $course->shortname);
         $tii['ctl']      = (strlen($tii['ctl']) > 5 ? $tii['ctl'] : $tii['ctl']."_____");
-        $turnitin_assignid = $DB->get_field('plagiarism_turnitin_config', 'value', array('cm'=>$cm->id, 'name'=>'turnitin_assignid'));
+        $params = array('cm' => $cm->id,
+                        'name' => 'turnitin_assignid');
+        $turnitin_assignid = $DB->get_field('plagiarism_turnitin_config', 'value', $params);
         if (!empty($turnitin_assignid)) {
             $tii['assignid'] = $turnitin_assignid;
         }
-        $tii['assign']   = turnitin_get_assign_name($module->name, $cm->id); //assignment name stored in TII
+        $tii['assign']   = turnitin_get_assign_name($module->name, $cm->id); // Assignment name stored in TII.
         $tii['fcmd']     = TURNITIN_RETURN_XML;
         $tii['fid']      = TURNITIN_LIST_SUBMISSIONS;
         $tiixml = plagiarism_get_xml(turnitin_get_url($tii, $plagiarismsettings));
 
         if (!empty($tiixml->object)) {
-            //get full list of turnitin_files for this cm
+            // Get full list of turnitin_files for this cm.
             $grademarkstatus= array();
             foreach ($tiixml->object as $tiiobject) {
                 $grademarkstatus[(int)$tiiobject->objectID[0]] = (int)$tiiobject->gradeMarkStatus[0];
@@ -486,7 +489,9 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
             if (!empty($grademarkstatus)) {
                 $plagiarsim_files = $DB->get_records('plagiarism_turnitin_files', array('cm'=>$cm->id));
                 foreach ($plagiarsim_files as $file) {
-                    if (isset($grademarkstatus[$file->externalid]) && $file->externalstatus <> $grademarkstatus[$file->externalid]) {
+                    if (isset($grademarkstatus[$file->externalid]) &&
+                        $file->externalstatus <> $grademarkstatus[$file->externalid]) {
+
                         $file->externalstatus = $grademarkstatus[$file->externalid];
                         $DB->update_record('plagiarism_turnitin_files', $file);
                     }
@@ -497,16 +502,17 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
     }
 
     /**
-     * used by admin/cron.php to get similarity scores from submitted files.
+     * Used by admin/cron.php to get similarity scores from submitted files.
      */
     public function cron() {
         global $CFG, $DB;
-        require_once("$CFG->libdir/filelib.php"); //HACK to include filelib so that when event cron is run then file_storage class is available
+        // HACK to include filelib so that when event cron is run then file_storage class is available.
+        require_once("$CFG->libdir/filelib.php");
         $plagiarismsettings = $this->get_settings();
         if ($plagiarismsettings) {
             turnitin_get_scores($plagiarismsettings);
         }
-        //get list of files that need to be resubmitted - sanity check against cm
+        // Get list of files that need to be resubmitted - sanity check against cm.
         if (!empty($plagiarismsettings['turnitin_attempts']) && is_numeric($plagiarismsettings['turnitin_attempts'])
             && !empty($plagiarismsettings['turnitin_attemptcodes'])) {
 
@@ -602,8 +608,8 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
                     $files = $fs->get_area_files($modulecontext->id, 'mod_'.$modulename, 'submission',
                                                  $submission->id, "timemodified", false);
                     if ($files) {
+                        /* @var stored_file $file */
                         foreach ($files as $file) {
-                            /* @var stored_file $file */
                             // TODO: need to check if this file has already been sent! - possible that the file was sent
                             // before draft submit was set.
                             $pid = plagiarism_update_record($cmid, $eventdata->userid, $file->get_pathnamehash());
@@ -687,7 +693,7 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
                     $fd = fopen($file->filepath, 'wb');  // Create if not exist, write binary.
                     fwrite( $fd, $qid->answer);
                     fclose( $fd );
-                    $result = turnitin_send_file($pid, $plagiarismsettings, $file);
+                    turnitin_send_file($pid, $plagiarismsettings, $file);
                     unlink($file->filepath); // Delete temp file.
                 }
             }
@@ -714,7 +720,9 @@ function turnitin_get_url($tii, $plagiarismsettings, $returnarray=false, $pid=''
 
     // Make sure all $tii values are clean.
     foreach ($tii as $key => $value) {
-        if (!empty($value) AND $key <> 'tem' AND $key <> 'uem' AND $key <> 'dtstart' AND $key <> 'dtdue' AND $key <> 'submit_date') {
+        if (!empty($value) AND $key <> 'tem' AND $key <> 'uem' AND
+            $key <> 'dtstart' AND $key <> 'dtdue' AND $key <> 'submit_date') {
+
             // Decode url first. (in case has already be encoded - don't want to end up with double % replacements).
             $value = rawurldecode($value);
             $value = rawurlencode($value);
@@ -722,13 +730,13 @@ function turnitin_get_url($tii, $plagiarismsettings, $returnarray=false, $pid=''
             $tii[$key] = $value;
         }
     }
-    //TODO need to check lengths of certain vars. - some cannot be under 5 or over 50.
+    // TODO need to check lengths of certain vars. - some cannot be under 5 or over 50.
     if (isset($plagiarismsettings['turnitin_senduseremail']) && $plagiarismsettings['turnitin_senduseremail']) {
         $tii['dis'] ='0'; // Ssets e-mail notification for users in tii system to enabled.
     } else {
         $tii['dis'] ='1'; // Sets e-mail notification for users in tii system to disabled.
     }
-    //set vars if not set.
+    // Set vars if not set.
     if (!isset($tii['encrypt'])) {
         $tii['encrypt'] = '0';
     }
@@ -792,13 +800,13 @@ function turnitin_get_url($tii, $plagiarismsettings, $returnarray=false, $pid=''
 
     $tii['gmtime']  = turnitin_get_gmtime();
     $tii['aid']     = $plagiarismsettings['turnitin_accountid'];
-    $tii['version'] = rawurlencode($CFG->release); //only used internally by TII.
-    $tii['src'] = '14'; //Magic number that identifies this Integration to Turnitin
-    //prepare $tii for md5string - need to urldecode before generating the md5.
+    $tii['version'] = rawurlencode($CFG->release); // Only used internally by TII.
+    $tii['src'] = '14'; // Magic number that identifies this Integration to Turnitin.
+    // Prepare $tii for md5string - need to urldecode before generating the md5.
     $tiimd5 = array();
     foreach ($tii as $key => $value) {
         if (!empty($value) AND $key <> 'tem' AND $key <> 'uem') {
-            $value = rawurldecode($value); //decode url for calculating MD5
+            $value = rawurldecode($value); // Decode url for calculating MD5.
             $tiimd5[$key] = $value;
         } else {
             $tiimd5[$key] = $value;
@@ -807,7 +815,7 @@ function turnitin_get_url($tii, $plagiarismsettings, $returnarray=false, $pid=''
 
     $tii['md5'] = turnitin_get_md5string($tiimd5, $plagiarismsettings);
     if (!empty($pid) &&!empty($tii['md5'])) {
-        //save this md5 into the record.
+        // Save this md5 into the record.
         $tiifile = new stdClass();
         $tiifile->id = $pid;
         $tiifile->apimd5 = $tii['md5'];
@@ -826,7 +834,7 @@ function turnitin_get_url($tii, $plagiarismsettings, $returnarray=false, $pid=''
 }
 
 /**
- * internal function gets the current time formatted for use in the Turnitin Url, used by turnitin_get_url
+ * Internal function gets the current time formatted for use in the Turnitin Url, used by turnitin_get_url.
  *
  * @return string - formatted for use in Turnitin API call.
  */
@@ -835,7 +843,7 @@ function turnitin_get_gmtime() {
 }
 
 /**
- * internal function that generates an md5 based on particular items in a $tii array - used by turnitin_get_url
+ * Internal function that generates an md5 based on particular items in a $tii array - used by turnitin_get_url
  *
  * @param array $tii the initial $tii object
  * @param array $plagiarismsettings
@@ -879,7 +887,7 @@ function turnitin_get_md5string($tii, $plagiarismsettings) {
 }
 
 /**
- * post data to TII
+ * Post data to TII
  *
  * @param array $tii - the object containing all the settings required.
  * @param $plagiarismsettings
@@ -894,14 +902,15 @@ function turnitin_post_data($tii, $plagiarismsettings, $file='', $pid='') {
     $url = get_config('plagiarism', 'turnitin_api');
     $status = check_dir_exists($CFG->dataroot."/plagiarism/", true);
     if ($status && !empty($file)) {
+        /* @var stored_file $file */
         if (!empty($file->type) && $file->type == "tempturnitin") {
             $fields['pdata'] = '@'.$file->filepath;
             $c = new curl(array('proxy'=>true));
             $xml = $c->post($url, $fields);
             $status = new SimpleXMLElement($xml);
         } else {
-            //We cannot access the file location of $file directly - we must create a temp file to point to instead
-            $filename = $CFG->dataroot."/plagiarism/".time().$file->get_filename(); //unique name for this file.
+            // We cannot access the file location of $file directly - we must create a temp file to point to instead.
+            $filename = $CFG->dataroot."/plagiarism/".time().$file->get_filename(); // Unique name for this file.
             $fh = fopen($filename, 'w');
             fwrite($fh, $file->get_content());
             fclose($fh);
@@ -927,7 +936,7 @@ function turnitin_post_data($tii, $plagiarismsettings, $file='', $pid='') {
  */
 function turnitin_start_session($user, $plagiarismsettings) {
     $tii = array();
-    //set globals.
+    // Set globals.
     $tii['utp']      = TURNITIN_STUDENT;
     $tii = turnitin_get_tii_user($tii, $user);
     $tii['fcmd']     = TURNITIN_RETURN_XML;
@@ -947,20 +956,22 @@ function turnitin_start_session($user, $plagiarismsettings) {
  * @param $user
  * @param array  $plagiarismsettings - from a call to plagiarism_get_settings
  * @param string $tiisession Turnitin sessionid - from a call to turnitin_start_session
+ * @return string
  */
 
 function turnitin_end_session($user, $plagiarismsettings, $tiisession) {
     if (empty($tiisession)) {
-        return;
+        return '';
     }
     $tii = array();
-    //set globals.
+    // Set globals.
     $tii['utp']      = TURNITIN_STUDENT;
     $tii = turnitin_get_tii_user($tii, $user);
     $tii['fcmd']     = TURNITIN_RETURN_XML;
     $tii['fid']      = TURNITIN_END_SESSION;
     $tii['session-id'] = $tiisession;
     $tiixml = plagiarism_get_xml(turnitin_get_url($tii, $plagiarismsettings));
+    return $tiixml;
 }
 
 /**
@@ -977,7 +988,7 @@ function turnitin_send_file($pid, $plagiarismsettings, $file) {
     global $DB, $CFG;
     require_once($CFG->libdir.'/filelib.php');
 
-    //get information about this file
+    // Get information about this file.
     $plagiarism_file = $DB->get_record('plagiarism_turnitin_files', array('id'=>$pid));
     $invalidrecord = false;
 
@@ -1007,10 +1018,12 @@ function turnitin_send_file($pid, $plagiarismsettings, $file) {
     }
     $dtstart = $DB->get_record('plagiarism_turnitin_config', array('cm' => $cm->id, 'name' => 'turnitin_dtstart'));
     if (!empty($dtstart) && $dtstart->value > time()) {
-        mtrace("Warning: $moduletype start date is too early ".date('Y-m-d H:i:s', $dtstart->value)." in course $course->shortname $moduletype $module->name will delay sending files until next cron");
-        return false; //TODO: check that this doesn't cause a failure in cron
+        $message = "Warning: $moduletype start date is too early ".date('Y-m-d H:i:s', $dtstart->value).
+            " in course $course->shortname $moduletype $module->name will delay sending files until next cron";
+        mtrace($message);
+        return false; // This will cause the cron to pause sending the event queue and restart the next time, when the time is OK.
     }
-    // Start Turnitin Session
+    // Start Turnitin Session.
     $tiisession = turnitin_start_session($user, $plagiarismsettings);
 
     // Basic data to send.
@@ -1022,7 +1035,7 @@ function turnitin_send_file($pid, $plagiarismsettings, $file) {
     $tii['ctl']      = (strlen($tii['ctl']) > 5 ? $tii['ctl'] : $tii['ctl']."_____");
     $tii['fcmd']     = TURNITIN_RETURN_XML;
     $tii['session-id'] = $tiisession;
-    //$tii['diagnostic'] = '1';
+    // $tii['diagnostic'] = '1';
 
     // Try to create or log in the student.
     $tii['fid']      = TURNITIN_CREATE_USER;
@@ -1033,7 +1046,8 @@ function turnitin_send_file($pid, $plagiarismsettings, $file) {
     if (isset($tiixml->rcode[0])) {
         turnitin_update_file_status_code($pid, $tiixml->rcode[0]);
     }
-    if (empty($tiixml->rcode[0]) or $tiixml->rcode[0] <> TURNITIN_RESP_USER_CREATED) { //this is the success code for uploading a file. - we need to return the oid and save it!
+    // This is the success code for uploading a file. - we need to return the oid and save it!
+    if (empty($tiixml->rcode[0]) or $tiixml->rcode[0] <> TURNITIN_RESP_USER_CREATED) {
         mtrace('could not create user/login to turnitin code:'.$tiixml->rcode[0].' '.$tiixml->rmessage);
         turnitin_end_session($user, $plagiarismsettings, $tiisession);
         return true;
@@ -1045,7 +1059,7 @@ function turnitin_send_file($pid, $plagiarismsettings, $file) {
     if (!empty($turnitin_assignid)) {
         $tii['assignid'] = $turnitin_assignid;
     }
-    $tii['assign']   = turnitin_get_assign_name($module->name, $cm->id); //assignment name stored in TII
+    $tii['assign']   = turnitin_get_assign_name($module->name, $cm->id); // Assignment name stored in TII.
     $tii['fid']      = TURNITIN_JOIN_CLASS;
     //$tii['diagnostic'] = '1';
     $tiixml = plagiarism_get_xml(turnitin_get_url($tii, $plagiarismsettings, false, $pid));
