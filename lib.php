@@ -34,7 +34,7 @@ define('PLAGIARISM_TII_SHOW_CLOSED', 2);
 define('PLAGIARISM_TII_DRAFTSUBMIT_IMMEDIATE', 0);
 define('PLAGIARISM_TII_DRAFTSUBMIT_FINAL', 1);
 
-//  fcmd types - return values.
+// Fcmd types - return values.
 define('TURNITIN_LOGIN', 1);
 define('TURNITIN_RETURN_XML', 2);
 define('TURNITIN_UPDATE_RETURN_XML', 3);
@@ -1250,7 +1250,10 @@ function turnitin_error_text($statuscode, $notify=true) {
  */
 function turnitin_update_assignment($plagiarismsettings, $plagiarismvalues, $eventdata, $action) {
     global $DB;
-    $result = true;
+
+    $result = true; // Default to true as we probably don't need to update. Switch to false later if it fails.
+    $tiixml = false;
+
     if ($action=='delete') {
         // Delete function deliberately not handled (fid=8)
         // if an assignment is deleted "accidentally" we can resotre off backups - but if
@@ -1422,12 +1425,13 @@ function turnitin_update_assignment($plagiarismsettings, $plagiarismvalues, $eve
                 mtrace("Turnitin Success creating Class and assignment");
             } else {
                 mtrace("Error: could not create assignment in class statuscode:".$tiixml->rcode[0].' '.$tiixml->rmessage, 3);
-                $return = false;
+                $result = false;
             }
 
         } else {
-            mtrace("Error: could not create class and assign global instructor statuscode:".$tiixml->rcode[0]);
-            $return = false;
+            $error = !empty($tiixml->rcode[0]) ? $tiixml->rcode[0] : 'No error code';
+            mtrace("Error: could not create class and assign global instructor statuscode:".$error);
+            $result = false;
         }
     }
     turnitin_end_session($user, $plagiarismsettings, $tiisession);
@@ -1578,7 +1582,7 @@ function turnitin_get_report_link($file, $course, $plagiarismsettings) {
  * Internal function that returns xml when provided a URL
  *
  * @param string $url the url being passed.
- * @return string xml
+ * @return SimpleXMLElement|bool xml
  */
 function plagiarism_get_xml($url) {
     global $CFG;
@@ -1591,7 +1595,7 @@ function plagiarism_get_xml($url) {
         $xml = new SimpleXMLElement($fp);
         return $xml;
     }
-    return '';
+    return false;
 }
 
 /**
