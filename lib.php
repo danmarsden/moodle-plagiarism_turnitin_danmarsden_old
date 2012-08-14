@@ -25,7 +25,7 @@
  */
 
 if (!defined('MOODLE_INTERNAL')) {
-    die('Direct access to this script is forbidden.');    ///  It must be included from a Moodle page
+    die('Direct access to this script is forbidden.');  // It must be included from a Moodle page.
 }
 define('PLAGIARISM_TII_SHOW_NEVER', 0);
 define('PLAGIARISM_TII_SHOW_ALWAYS', 1);
@@ -34,15 +34,15 @@ define('PLAGIARISM_TII_SHOW_CLOSED', 2);
 define('PLAGIARISM_TII_DRAFTSUBMIT_IMMEDIATE', 0);
 define('PLAGIARISM_TII_DRAFTSUBMIT_FINAL', 1);
 
-//Turnitin fcmd types - return values.
+//  fcmd types - return values.
 define('TURNITIN_LOGIN', 1);
 define('TURNITIN_RETURN_XML', 2);
 define('TURNITIN_UPDATE_RETURN_XML', 3);
-// Turnitin user types
+// Turnitin user types.
 define('TURNITIN_STUDENT', 1);
 define('TURNITIN_INSTRUCTOR', 2);
 define('TURNITIN_ADMIN', 3);
-//Turnitin API actions.
+// Turnitin API actions.
 define('TURNITIN_CREATE_USER', 1);
 define('TURNITIN_CREATE_CLASS', 2);
 define('TURNITIN_JOIN_CLASS', 3);
@@ -50,7 +50,7 @@ define('TURNITIN_CREATE_ASSIGNMENT', 4);
 define('TURNITIN_SUBMIT_PAPER', 5);
 define('TURNITIN_RETURN_REPORT', 6);
 define('TURNITIN_VIEW_SUBMISSION', 7);
-define('TURNITIN_DELETE_SUBMISSION', 8); //unlikely to need this.
+define('TURNITIN_DELETE_SUBMISSION', 8); // Unlikely to need this.
 define('TURNITIN_LIST_SUBMISSIONS', 10);
 define('TURNITIN_CHECK_SUBMISSION', 11);
 define('TURNITIN_ADMIN_STATS', 12);
@@ -59,26 +59,25 @@ define('TURNITIN_REPORT_TIME', 14);
 define('TURNITIN_SUBMISSION_SCORE', 15);
 define('TURNITIN_START_SESSION', 17);
 define('TURNITIN_END_SESSION', 18);
-//Turnitin allowed file types
+// Turnitin allowed file types.
 define('TURNITIN_TYPE_TEXT', 1);
 define('TURNITIN_TYPE_FILE', 2);
 
-//Turnitin Response codes - there are many more of these, just not used directly.
-//
-define('TURNITIN_RESP_USER_CREATED', 11); // User creation successful, do not send to login
-define('TURNITIN_RESP_CLASS_CREATED_LOGIN', 20); // Class created successfully, send to login
-define('TURNITIN_RESP_CLASS_CREATED', 21); // Class Created successfully, do not send to login
-define('TURNITIN_RESP_CLASS_UPDATED', 22); // Class updated successfully
-define('TURNITIN_RESP_USER_JOINED', 31); // successful, User joined to class, do not sent to login
-define('TURNITIN_RESP_ASSIGN_CREATED', 41); // Assignment Created
-define('TURNITIN_RESP_ASSIGN_MODIFIED', 42); // Assignment modified
-define('TURNITIN_RESP_ASSIGN_DELETED', 43); // Assignment deleted
-define('TURNITIN_RESP_PAPER_SENT', 51); // paper submitted
+// Turnitin Response codes - there are many more of these, just not used directly.
+define('TURNITIN_RESP_USER_CREATED', 11); // User creation successful, do not send to login.
+define('TURNITIN_RESP_CLASS_CREATED_LOGIN', 20); // Class created successfully, send to login.
+define('TURNITIN_RESP_CLASS_CREATED', 21); // Class Created successfully, do not send to login.
+define('TURNITIN_RESP_CLASS_UPDATED', 22); // Class updated successfully.
+define('TURNITIN_RESP_USER_JOINED', 31); // Successful, User joined to class, do not sent to login.
+define('TURNITIN_RESP_ASSIGN_CREATED', 41); // Assignment Created.
+define('TURNITIN_RESP_ASSIGN_MODIFIED', 42); // Assignment modified.
+define('TURNITIN_RESP_ASSIGN_DELETED', 43); // Assignment deleted.
+define('TURNITIN_RESP_PAPER_SENT', 51); // Paper submitted.
 define('TURNITIN_RESP_SCORE_RECEIVED', 61); // Originality score retrieved.
 define('TURNITIN_RESP_ASSIGN_EXISTS', 419); // Assignment already exists.
 define('TURNITIN_RESP_SCORE_NOT_READY', 415);
 
-//get global class
+// Get global class.
 global $CFG;
 require_once($CFG->dirroot.'/plagiarism/lib.php');
 
@@ -88,17 +87,17 @@ require_once($CFG->dirroot.'/plagiarism/lib.php');
 class plagiarism_plugin_turnitin extends plagiarism_plugin {
 
     /**
-     * @param $linkarray
+     * @param array $linkarray
      * @return string
      */
-    public function get_links($linkarray) {
-        global $DB, $USER, $COURSE, $CFG;
+    public function get_links(array $linkarray) {
+
         $cmid = $linkarray['cmid'];
         $userid = $linkarray['userid'];
         $file = $linkarray['file'];
         $results = $this->get_file_results($cmid, $userid, $file);
         if (empty($results)) {
-            // Cron has not run yet
+            // Cron has not run yet.
             return '<br />';
         }
 
@@ -115,15 +114,16 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
 
         $similaritystring = '<span class="' . $rank . '">' . $results['score'] . '%</span>';
         if (!empty($results['reporturl'])) {
-            // User gets to see link to similarity report & similarity score
+            // User gets to see link to similarity report & similarity score.
             $output = '<span class="plagiarismreport"><a href="' . $results['reporturl'] . '" target="_blank">';
             $output .= get_string('similarity', 'plagiarism_turnitin').':</a>' . $similaritystring . '</span>';
         } else {
-            // User only sees similarity score
-            $output = '<span class="plagiarismreport">' . get_string('similarity', 'plagiarism_turnitin') . $similaritystring . '</span>';
+            // User only sees similarity score.
+            $output = '<span class="plagiarismreport">' . get_string('similarity', 'plagiarism_turnitin') .
+                      $similaritystring . '</span>';
         }
 
-        //now check if grademark enabled and return the status of this file.
+        // Now check if grademark enabled and return the status of this file.
         if (!empty($results['grademarklink'])) {
             $output .= '<span class="grademark">' . $results['grademarklink'] . "</span>";
         }
@@ -139,16 +139,16 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
      * @return mixed - false if no info available, or an array describing what's known about the TII submission
      */
     public function get_file_results($cmid, $userid, stored_file $file) {
-        global $DB, $USER, $COURSE, $OUTPUT;
+        global $DB, $USER, $COURSE;
 
         $plagiarismsettings = $this->get_settings();
         if (empty($plagiarismsettings)) {
-            // Turnitin is not enabled
+            // Turnitin is not enabled.
             return false;
         }
         $plagiarismvalues = $DB->get_records_menu('plagiarism_turnitin_config', array('cm'=>$cmid), '', 'name,value');
         if (empty($plagiarismvalues['use_turnitin'])) {
-            // Turnitin not in use for this cm
+            // Turnitin not in use for this cm.
             return false;
         }
 
@@ -162,7 +162,7 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
             $module = $DB->get_record($moduledetail->name, array('id'=>$moduledetail->instance));
         }
         if (empty($module)) {
-            // No such cmid
+            // No such cmid.
             return false;
         }
 
@@ -172,7 +172,7 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
         $viewsimilarityscore = has_capability('plagiarism/turnitin:viewsimilarityscore', $modulecontext);
         $viewfullreport = has_capability('plagiarism/turnitin:viewfullreport', $modulecontext);
         if ($USER->id == $userid) {
-            // The user wants to see details on their own report
+            // The user wants to see details on their own report.
             if ($plagiarismvalues['plagiarism_show_student_score'] == PLAGIARISM_TII_SHOW_ALWAYS) {
                 $viewsimilarityscore = true;
             }
@@ -189,7 +189,7 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
         $plagiarismfile = $DB->get_record('plagiarism_turnitin_files',
                 array('cm' => $cmid, 'userid' => $userid, 'identifier' => $filehash));
         if (empty($plagiarismfile)) {
-            // No record of that submission - so no links can be returned
+            // No record of that submission - so no links can be returned.
             return false;
         }
         $results = array(
@@ -198,7 +198,7 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
                 'reporturl' => '',
                 );
         if (isset($plagiarismfile->statuscode) && $plagiarismfile->statuscode != 'success') {
-            //always display errors - even if the student isn't able to see report/score.
+            // Always display errors - even if the student isn't able to see report/score.
             $results['error'] = turnitin_error_text($plagiarismfile->statuscode);
             return $results;
         }
@@ -207,7 +207,7 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
         $results['analyzed'] = 1;
         $results['score'] = $plagiarismfile->similarityscore;
         if ($viewfullreport) {
-            // User gets to see link to similarity report
+            // User gets to see link to similarity report.
             $results['reporturl'] = turnitin_get_report_link($plagiarismfile, $COURSE, $plagiarismsettings);
         }
 
@@ -226,19 +226,20 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
             return;
         }
         if (isset($data->use_turnitin)) {
-            //array of posible plagiarism config options.
+            // Array of possible plagiarism config options.
             $plagiarismelements = $this->config_options();
-            //first get existing values
-            $existingelements = $DB->get_records_menu('plagiarism_turnitin_config', array('cm'=>$data->coursemodule), '', 'name,id');
+            // First get existing values.
+            $params = array('cm' => $data->coursemodule);
+            $existingelements = $DB->get_records_menu('plagiarism_turnitin_config', $params, '', 'name,id');
             foreach ($plagiarismelements as $element) {
                 $newelement = new object();
                 $newelement->cm = $data->coursemodule;
                 $newelement->name = $element;
                 $newelement->value = (isset($data->$element) ? $data->$element : 0);
-                if (isset($existingelements[$element])) { //update
+                if (isset($existingelements[$element])) { // Update.
                     $newelement->id = $existingelements[$element];
                     $DB->update_record('plagiarism_turnitin_config', $newelement);
-                } else { //insert
+                } else { // Insert.
                     $DB->insert_record('plagiarism_turnitin_config', $newelement);
                 }
 
@@ -247,42 +248,47 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
     }
 
     /**
-     * @param object $mform
+     * Adds the standard form elements to the mod_form which allow Turnitin to be enabled for a module.
+     *
+     * @param MoodleQuickForm $mform
      * @param object $context
      */
     public function get_form_elements_module($mform, $context) {
-        global $CFG, $DB;
+        global $DB;
+
         if (!$this->get_settings()) {
             return;
         }
-        $cmid = optional_param('update', 0, PARAM_INT); //there doesn't seem to be a way to obtain the current cm a better way - $this->_cm is not available here.
+        // There doesn't seem to be a way to obtain the current cm a better way - $this->_cm is not available here.
+        $cmid = optional_param('update', 0, PARAM_INT);
         if (!empty($cmid)) {
             $plagiarismvalues = $DB->get_records_menu('plagiarism_turnitin_config', array('cm'=>$cmid), '', 'name,value');
         }
-        $plagiarismdefaults = $DB->get_records_menu('plagiarism_turnitin_config', array('cm'=>0), '', 'name,value'); //cmid(0) is the default list.
+        // Cmid(0) is the default list.
+        $plagiarismdefaults = $DB->get_records_menu('plagiarism_turnitin_config', array('cm'=>0), '', 'name,value');
         $plagiarismelements = $this->config_options();
         if (has_capability('plagiarism/turnitin:enable', $context)) {
             turnitin_get_form_elements($mform);
             if ($mform->elementExists('plagiarism_draft_submit')) {
                 $mform->disabledIf('plagiarism_draft_submit', 'var4', 'eq', 0);
             }
-            //disable all plagiarism elements if use_plagiarism eg 0
+            // Disable all plagiarism elements if use_plagiarism eg 0.
             foreach ($plagiarismelements as $element) {
-                if ($element <> 'use_turnitin') { //ignore this var
+                if ($element <> 'use_turnitin') { // Ignore this var.
                     $mform->disabledIf($element, 'use_turnitin', 'eq', 0);
                 }
             }
-            //check if files have already been submitted and disable exclude biblio and quoted if turnitin is enabled.
+            // Check if files have already been submitted and disable exclude biblio and quoted if turnitin is enabled.
             if ($DB->record_exists('plagiarism_turnitin_files', array('cm'=> $cmid))) {
                 $mform->disabledIf('plagiarism_exclude_biblio', 'use_turnitin');
                 $mform->disabledIf('plagiarism_exclude_quoted', 'use_turnitin');
             }
-        } else { //add plagiarism settings as hidden vars.
+        } else { // Add plagiarism settings as hidden vars.
             foreach ($plagiarismelements as $element) {
                 $mform->addElement('hidden', $element);
             }
         }
-        //now set defaults.
+        // Now set defaults.
         foreach ($plagiarismelements as $element) {
             if (isset($plagiarismvalues[$element])) {
                 $mform->setDefault($element, $plagiarismvalues[$element]);
@@ -301,7 +307,8 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
 
         $outputhtml = '';
 
-        if ($plagiarismsettings = $this->get_settings()) {
+        $plagiarismsettings = $this->get_settings();
+        if ($plagiarismsettings) {
             if (!empty($plagiarismsettings['turnitin_student_disclosure'])) {
 
                 $params = array('cm' => $cmid, 'name' => 'use_turnitin');
@@ -320,15 +327,15 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
 
     /**
      * This function should be used to initialise settings and check if plagiarism is enabled
-     * *
+     *
      * @return mixed - false if not enabled, or returns an array of relavant settings.
      */
     public function get_settings() {
-        global $DB;
+
         $plagiarismsettings = (array)get_config('plagiarism');
-        //check if tii enabled.
-        if (isset($plagiarismsettings['turnitin_use']) && $plagiarismsettings['turnitin_use'] && isset($plagiarismsettings['turnitin_accountid']) && $plagiarismsettings['turnitin_accountid']) {
-            //now check to make sure required settings are set!
+        // Check if tii enabled.
+        if (!empty($plagiarismsettings['turnitin_use']) && !empty($plagiarismsettings['turnitin_accountid'])) {
+            // Now check to make sure required settings are set!
             if (empty($plagiarismsettings['turnitin_secretkey'])) {
                 print_error('missingkey', 'plagiarism_turnitin');
             }
@@ -370,7 +377,7 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
         $newrecord = null;
         if (!isset($USER->profile)) {
             // User has had a partial login - possibly over web services.
-            // Check for profile details directly in DB:
+            // Check for profile details directly in DB...
             $sql = 'SELECT d.id, d.data ' .
                     'FROM {user_info_field} f ' .
                     ' INNER JOIN {user_info_data} d ON d.fieldid = f.id ' .
@@ -402,22 +409,22 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
         }
 
         if (!in_array($course->id, $existingcourses)) {
-            // Turnitin doesn't (yet) know that this user is a teacher in this course.  Tell them:
+            // Turnitin doesn't (yet) know that this user is a teacher in this course. Tell them.
             $tii = array();
             $tii['utp']      = TURNITIN_INSTRUCTOR;
             $tii = turnitin_get_tii_user($tii, $USER);
-            $tii['cid']      = get_config('plagiarism_turnitin_course', $course->id); //course ID
+            $tii['cid']      = get_config('plagiarism_turnitin_course', $course->id); // Course ID.
             $tii['ctl']      = (strlen($course->shortname) > 45 ? substr($course->shortname, 0, 45) : $course->shortname);
             $tii['ctl']      = (strlen($tii['ctl']) > 5 ? $tii['ctl'] : $tii['ctl']."_____");
             $tii['fcmd'] = TURNITIN_RETURN_XML;
             $tii['fid']  = TURNITIN_CREATE_CLASS;
             $tiixml = plagiarism_get_xml(turnitin_get_url($tii, $plagiarismsettings));
             if ($tiixml->rcode[0] != TURNITIN_RESP_CLASS_CREATED) {
-                return $OUTPUT->notification(get_string('errorassigninguser','plagiarism_turnitin'));
+                return $OUTPUT->notification(get_string('errorassigninguser', 'plagiarism_turnitin'));
             }
             $existingcourses[] = $course->id;
             $newcoursecache =  implode(',', $existingcourses);
-            // Now update our record of what teacherships TII knows about:
+            // Now update our record of what teacherships TII knows about.
             $userprofilefieldid = $DB->get_field('user_info_field', 'id', array('shortname'=>$userprofilefieldname));
             if ($newrecord) {
                 // New field - will need to insert a new record.
@@ -427,17 +434,19 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
                 $userdata->data = $newcoursecache;
                 $DB->insert_record('user_info_data', $userdata);
             } else {
-                $DB->set_field('user_info_data', 'data', $newcoursecache, array('userid'=>$USER->id, 'fieldid'=>$userprofilefieldid));
+                $params = array('userid' => $USER->id,
+                                'fieldid' => $userprofilefieldid);
+                $DB->set_field('user_info_data', 'data', $newcoursecache, $params);
             }
 
             $USER->profile[$userprofilefieldname] = $newcoursecache;
         }
 
         $tii = array();
-        //print link to teacher login
-        $tii['fcmd'] = TURNITIN_LOGIN; //when set to 2 this returns XML
+        // Print link to teacher login.
+        $tii['fcmd'] = TURNITIN_LOGIN; // When set to 2 this returns XML.
         $tii['utp'] = TURNITIN_INSTRUCTOR;
-        $tii['fid'] = TURNITIN_CREATE_USER; //set commands - Administrator login/statistics.
+        $tii['fid'] = TURNITIN_CREATE_USER; // Set commands - Administrator login/statistics.
         $tii = turnitin_get_tii_user($tii, $USER);
         $outputhtml .= '<div style="text-align:right"><a href="'.turnitin_get_url($tii, $plagiarismsettings).'" target="_blank">'.get_string("teacherlogin","plagiarism_turnitin").'</a></div>';
 
