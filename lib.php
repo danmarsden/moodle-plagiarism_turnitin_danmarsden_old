@@ -567,12 +567,17 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
                 return false;
             }
 
-            if (empty($eventdata->pathnamehashes)) {
+            if (!empty($eventdata->file) && empty($eventdata->files)) { //single assignment type passes a single file
+                $eventdata->files[] = $eventdata->file;
+            }
+
+            if (empty($eventdata->files)) {
                 // There are no files attached to this 'fileuploaded' event.
                 // This is a 'finalize' event - assignment-focused functionality
                 mtrace("finalise");
                 if (isset($plagiarismvalues['plagiarism_draft_submit'])
-                        && $plagiarismvalues['plagiarism_draft_submit'] == PLAGIARISM_TII_DRAFTSUBMIT_FINAL) {
+                    && $plagiarismvalues['plagiarism_draft_submit'] == PLAGIARISM_TII_DRAFTSUBMIT_FINAL
+                ) {
                     // Drafts haven't previously been sent
                     // get assignment details, list of draft files and submit to TII.
                     require_once("$CFG->dirroot/mod/$modulename/lib.php");
@@ -583,17 +588,16 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
                     $modulecontext = get_context_instance(CONTEXT_MODULE, $eventdata->cmid);
                     $fs = get_file_storage();
                     $result = true;
-                    $files = $fs->get_area_files($modulecontext->id, 'mod_'.$modulename,
-                                                 'submission', $submission->id, "timemodified", false);
+                    $files = $fs->get_area_files($modulecontext->id, 'mod_'.$modulename, 'submission',
+                                                 $submission->id, "timemodified", false);
                     if ($files) {
-                        mtrace("files");
                         foreach ($files as $file) {
                             /* @var stored_file $file */
+                            $fileresult = false;
+                            //TODO: need to check if this file has already been sent! - possible that the file was sent before draft submit was set.
                             $pid = plagiarism_update_record($cmid, $eventdata->userid, $file->get_pathnamehash());
                             if (!empty($pid)) {
                                 $fileresult = turnitin_send_file($pid, $plagiarismsettings, $file);
-                            } else {
-                                $fileresult = true; // Already sent.
                             }
                             $result = $fileresult && $result;
                         }
@@ -604,7 +608,8 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
 
             // Assignment-module focused functionality:
             if (isset($plagiarismvalues['plagiarism_draft_submit'])
-                    && $plagiarismvalues['plagiarism_draft_submit'] == PLAGIARISM_TII_DRAFTSUBMIT_FINAL) {
+                && $plagiarismvalues['plagiarism_draft_submit'] == PLAGIARISM_TII_DRAFTSUBMIT_FINAL
+            ) {
                 // Files shouldn't be submitted to TII until 'finalize' file upload event.
                 return true;
             }
@@ -612,16 +617,18 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
             // Normal scenario - this is an upload event with one or more attached files
             // Attached file(s) are to be immediately submitted to TII
             $result = true;
-            foreach ($eventdata->pathnamehashes as $hash) {
+            foreach ($eventdata->files as $efile) {
+                /* @var stored_file $efile */
                 $fileresult = false;
-                $fs = get_file_storage();
-                $efile = $fs->get_file_by_hash($hash);
-
-                if (empty($efile)) {
-                    mtrace("nofilefound!");
-                    continue;
-                } else if ($efile->get_filename() ==='.') {
+                if ($efile->get_filename() === '.') {
                     // This is a directory - nothing to do.
+                    continue;
+                }
+                //hacky way to check file still exists
+                $fs = get_file_storage();
+                $fileid = $fs->get_file_by_hash($efile->get_pathnamehash());
+                if (empty($fileid)) {
+                    mtrace("nofilefound!");
                     continue;
                 }
 
