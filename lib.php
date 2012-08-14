@@ -604,12 +604,13 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
                     if ($files) {
                         foreach ($files as $file) {
                             /* @var stored_file $file */
-                            $fileresult = false;
                             // TODO: need to check if this file has already been sent! - possible that the file was sent
                             // before draft submit was set.
                             $pid = plagiarism_update_record($cmid, $eventdata->userid, $file->get_pathnamehash());
                             if (!empty($pid)) {
                                 $fileresult = turnitin_send_file($pid, $plagiarismsettings, $file);
+                            } else {
+                                $fileresult = true; // File already been sent.
                             }
                             $result = $fileresult && $result;
                         }
@@ -631,7 +632,6 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
             $result = true;
             foreach ($eventdata->files as $efile) {
                 /* @var stored_file $efile */
-                $fileresult = false;
                 if ($efile->get_filename() === '.') {
                     // This is a directory - nothing to do.
                     continue;
