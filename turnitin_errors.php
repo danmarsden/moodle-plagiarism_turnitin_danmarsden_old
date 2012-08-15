@@ -152,8 +152,12 @@ foreach ($turnitin_files as $tf) {
     $modulecontext = get_context_instance(CONTEXT_MODULE, $tf->cm);
     $coursemodule = get_coursemodule_from_id($tf->moduletype, $tf->cm);
     $file = $fs->get_file_by_hash($tf->identifier);
-    if ($file) {
-        $fileurl = file_encode_url("$CFG->wwwroot/pluginfile.php", '/'.$modulecontext->id.'/mod_assignment/submission/'.$file->get_itemid(). $file->get_filepath().$file->get_filename(), true);
+    if ($file && ($tf->moduletype == 'assignment' || $tf->moduletype == 'assign')) {
+        if ($tf->moduletype == 'assignment') {
+            $fileurl = file_encode_url("$CFG->wwwroot/pluginfile.php", '/'.$modulecontext->id.'/mod_assignment/submission/'.$file->get_itemid(). $file->get_filepath().$file->get_filename(), true);
+        } else if ($tf->moduletype == 'assign') {
+            $fileurl = file_encode_url("$CFG->wwwroot/pluginfile.php", '/'.$modulecontext->id.'/assignsubmission_file/'.ASSIGNSUBMISSION_FILE_FILEAREA.'/'.$file->get_itemid(). $file->get_filepath().$file->get_filename(), true);
+        }
         $filelink = html_writer::link($fileurl, shorten_text($file->get_filename(), 40, true), array('title'=>$file->get_filename()));
     } else {
         $filelink = $tf->identifier;
