@@ -28,6 +28,7 @@ require_once($CFG->libdir.'/adminlib.php');
 require_once($CFG->libdir.'/plagiarismlib.php');
 require_once($CFG->dirroot.'/plagiarism/turnitin/lib.php');
 require_once('turnitin_form.php');
+require_once($CFG->dirroot.'/mod/assign/locallib.php');
 require_once($CFG->dirroot.'/mod/assign/submission/file/locallib.php');
 
 require_login();
