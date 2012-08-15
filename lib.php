@@ -1305,9 +1305,7 @@ function turnitin_update_assignment($plagiarismsettings, $plagiarismvalues, $eve
                                               $tiixml->rcode[0] == TURNITIN_RESP_CLASS_CREATED or
                                               $tiixml->rcode[0] == TURNITIN_RESP_CLASS_UPDATED)) {
                 // Save external courseid for future reference.
-                if (!empty($tiixml->classid[0])) {
-                    set_config($course->id, $tii['cid'], 'plagiarism_turnitin_course');
-                }
+                set_config($course->id, $tii['cid'], 'plagiarism_turnitin_course');
             } else {
                 $result = false;
             }
