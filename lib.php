@@ -547,7 +547,7 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
             return turnitin_update_assignment($plagiarismsettings, $plagiarismvalues, $eventdata);
         } else if ($eventdata->eventtype=="mod_deleted") {
             return turnitin_delete_assignment($plagiarismsettings, $plagiarismvalues, $eventdata);
-        } else if ($eventdata->eventtype=="file_uploaded") {
+        } else if ($eventdata->eventtype=="file_uploaded" or $eventdata->eventtype=="file_done") {
             // check if the module associated with this event still exists
             $cm = $DB->get_record('course_modules', array('id' => $eventdata->cmid));
 
@@ -567,7 +567,7 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
                 return false;
             }
 
-            if (empty($eventdata->pathnamehashes)) {
+            if (empty($eventdata->pathnamehashes) && $eventdata->eventtype=="file_done") {
                 // There are no files attached to this 'fileuploaded' event.
                 // This is a 'finalize' event - assignment-focused functionality
                 mtrace("finalise");
@@ -1812,7 +1812,7 @@ function turnitin_event_file_uploaded($eventdata) {
  * @return bool
  */
 function turnitin_event_files_done($eventdata) {
-    $eventdata->eventtype = 'file_uploaded';
+    $eventdata->eventtype = 'file_done';
     $turnitin = new plagiarism_plugin_turnitin();
     return $turnitin->event_handler($eventdata);
 }

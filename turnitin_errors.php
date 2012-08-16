@@ -77,7 +77,7 @@ if ($resetuser==1 && $id) {
             $eventdata->cmid         = $tfile->cm;
             $eventdata->courseid     = $tfile->courseid;
             $eventdata->userid       = $tfile->userid;
-            $eventdata->files        = $files;
+            $eventdata->pathnamehashes = array_keys($files);
 
             events_trigger('assessable_file_uploaded', $eventdata);
             //now reset status so that it disapears from error page
