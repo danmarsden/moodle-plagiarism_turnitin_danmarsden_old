@@ -371,6 +371,11 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
             return '';
         }
 
+        $cid = get_config('plagiarism_turnitin_course', $course->id);
+        if (empty($cid)) {  // Course/assignment doesn't exist so don't show link to login or add user to course.
+            return;
+        }
+
         // If Turinitin has already been told about this user's rights in this course,
         // the courseid will exist in a comma separated listed in a hidden profile field.
         // Thus stored so that we don't repeatedly advise turnitin, and site admins can clear the cache if so desired.
@@ -409,11 +414,11 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
         }
 
         if (!in_array($course->id, $existingcourses)) {
-            // Turnitin doesn't (yet) know that this user is a teacher in this course. Tell them.
+            // Turnitin doesn't (yet) know that this user is a teacher in this course, Tell them.
             $tii = array();
             $tii['utp']      = TURNITIN_INSTRUCTOR;
             $tii = turnitin_get_tii_user($tii, $USER);
-            $tii['cid']      = get_config('plagiarism_turnitin_course', $course->id); // Course ID.
+            $tii['cid']      = $cid;
             $tii['ctl']      = (strlen($course->shortname) > 45 ? substr($course->shortname, 0, 45) : $course->shortname);
             $tii['ctl']      = (strlen($tii['ctl']) > 5 ? $tii['ctl'] : $tii['ctl']."_____");
             $tii['fcmd'] = TURNITIN_RETURN_XML;
