@@ -1188,8 +1188,8 @@ function turnitin_error_text($statuscode, $notify=true) {
             $return = get_string('tiierror'.$statuscode, 'plagiarism_turnitin');
         } else if ($statuscode > 1024 && $statuscode < 2000) { //don't have documentation on the other 1000 series errors, so just display a general one.
             $return = get_string('tiierrorpaperfail', 'plagiarism_turnitin').':'.$statuscode;
-        } else if ($statuscode < 1025 || $statuscode > 2000) { //these are not errors that a student can make any sense out of.
-            $return = get_string('tiiconfigerror', 'plagiarism_turnitin').'('.$statuscode.')';
+        } else if ($statuscode < 1025 || $statuscode > 2000) { // These are not errors that a student can make any sense out of.
+            $return = get_string('tiiconfigerror', 'plagiarism_turnitin').' ('.$statuscode.')';
             if (has_capability('plagiarism/turnitin:enable', $PAGE->context)) {
                 $return .= html_writer::empty_tag('br');
                 $return .= get_string('errorlookup', 'plagiarism_turnitin');
