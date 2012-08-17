@@ -1218,9 +1218,15 @@ function turnitin_get_scores($plagiarismsettings) {
  * @return string
  */
 function turnitin_error_text($statuscode, $notify=true) {
-    global $OUTPUT;
+    global $OUTPUT, $CFG;
     $return = '';
     $statuscode = (int) $statuscode;
+
+    // If in developer mode, show all errors.
+    if ($CFG->debug == DEBUG_DEVELOPER) {
+        $return = get_string('tiierror'.$statuscode, 'plagiarism_turnitin');
+    }
+
     if (!empty($statuscode)) {
         if ($statuscode == 51) {
             // Let them know if it's being processes right now.
