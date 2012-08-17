@@ -1218,9 +1218,10 @@ function turnitin_get_scores($plagiarismsettings) {
  * @return string
  */
 function turnitin_error_text($statuscode, $notify=true) {
-    global $OUTPUT;
+    global $OUTPUT, $CFG, $PAGE;
     $return = '';
     $statuscode = (int) $statuscode;
+
     if (!empty($statuscode)) {
         if ($statuscode == 51) {
             // Let them know if it's being processes right now.
@@ -1235,7 +1236,11 @@ function turnitin_error_text($statuscode, $notify=true) {
             // Don't have documentation on the other 1000 series errors, so just display a general one.
             $return = get_string('tiierrorpaperfail', 'plagiarism_turnitin').':'.$statuscode;
         } else if ($statuscode < 1025 || $statuscode > 2000) { // These are not errors that a student can make any sense out of.
-            $return = get_string('tiiconfigerror', 'plagiarism_turnitin').'('.$statuscode.')';
+            $return = get_string('tiiconfigerror', 'plagiarism_turnitin').' ('.$statuscode.')';
+            if (has_capability('plagiarism/turnitin:enable', $PAGE->context)) {
+                $return .= html_writer::empty_tag('br');
+                $return .= get_string('errorlookup', 'plagiarism_turnitin');
+            }
         }
         if (!empty($return) && $notify) {
             $return = $OUTPUT->notification($return, 'notifyproblem');
