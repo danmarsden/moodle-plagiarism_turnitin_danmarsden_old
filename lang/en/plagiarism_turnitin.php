@@ -121,3 +121,4 @@ $string['anonymity_help'] = 'This will prevent teachers from being able to see w
 $string['missingkey'] = 'Turnitin Secret Key not set!';
 $string['fileopenerror'] = 'error trying to open plagiarism XML file! {$a}';
 $string['beingprocessed'] = 'File was uploaded successfully and is currently being processed by turnitin';
+$string['errorlookup'] = 'See <a href ="http://docs.moodle.org/dev/Turnitin_errors">here</a> for an explanation of the code';
