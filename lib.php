@@ -97,7 +97,23 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
         global $DB, $USER, $COURSE, $CFG;
         $cmid = $linkarray['cmid'];
         $userid = $linkarray['userid'];
-        $file = $linkarray['file'];
+        if (!empty($linkarray['content'])) {
+            $linkarray['content'] = '<html>' . $linkarray['content'] . '</html>';
+            $filename = "content-" . $COURSE->id . "-" . $cmid . "-". $userid . ".html";
+            $filepath = $CFG->dataroot."/temp/turnitin/" . $filename;
+            $file = new stdclass();
+            $file->type = "tempturnitin";
+            $file->filename = $filename;
+            $file->timestamp = time();
+            $file->identifier = sha1($linkarray['content']);
+            $file->filepath =  $filepath;
+        } else if (!empty($linkarray['file'])) {
+            $file = new stdclass();
+            $file->filename = $linkarray['file']->get_filename();
+            $file->timestamp = time();
+            $file->identifier = $linkarray['file']->get_pathnamehash();
+            $file->filepath =  $linkarray['file']->get_filepath();
+        }
         $results = $this->get_file_results($cmid, $userid, $file);
         if (empty($results)) {
             // Cron has not run yet
@@ -137,10 +153,10 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
      *
      * @param int $cmid the id of the coursemodule file was submitted for
      * @param int $userid the id of the user who submitted the file
-     * @param stored_file $file file object describing a moodle file which was submited to TII
+     * @param $file file object describing a moodle file which was submited to TII
      * @return mixed - false if no info available, or an array describing what's known about the TII submission
      */
-    public function get_file_results($cmid, $userid, stored_file $file) {
+    public function get_file_results($cmid, $userid, $file) {
         global $DB, $USER, $COURSE, $OUTPUT;
 
         $plagiarismsettings = $this->get_settings();
@@ -154,7 +170,7 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
             return false;
         }
 
-        $filehash = $file->get_pathnamehash();
+        $filehash = $file->identifier;
         $modulesql = 'SELECT m.id, m.name, cm.instance'.
                 ' FROM {course_modules} cm' .
                 ' INNER JOIN {modules} m on cm.module = m.id ' .
@@ -251,8 +267,9 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
     /**
      * @param object $mform
      * @param object $context
+     * @param string $modulename - Name of the module
      */
-    public function get_form_elements_module($mform, $context) {
+    public function get_form_elements_module($mform, $context, $modulename = "") {
         global $CFG, $DB;
         if (!$this->get_settings()) {
             return;
@@ -564,8 +581,10 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
             return turnitin_update_assignment($plagiarismsettings, $plagiarismvalues, $eventdata);
         } else if ($eventdata->eventtype=="mod_deleted") {
             return turnitin_delete_assignment($plagiarismsettings, $plagiarismvalues, $eventdata);
-        } else if ($eventdata->eventtype=="file_uploaded" or $eventdata->eventtype=="file_done") {
-            // check if the module associated with this event still exists
+        } else if ($eventdata->eventtype=="file_uploaded" ||
+        		   $eventdata->eventtype=="content_uploaded" ||
+        		   $eventdata->eventtype=="file_done") {
+            // Check if the module associated with this event still exists
             $cm = $DB->get_record('course_modules', array('id' => $eventdata->cmid));
 
             $modulename = $DB->get_field('modules', 'name', array('id' => $cm->module));
@@ -588,6 +607,7 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
                 // There are no files attached to this 'fileuploaded' event.
                 // This is a 'finalize' event - assignment-focused functionality
                 mtrace("finalise");
+                $result = true;
                 if (isset($plagiarismvalues['plagiarism_draft_submit'])
                         && $plagiarismvalues['plagiarism_draft_submit'] == PLAGIARISM_TII_DRAFTSUBMIT_FINAL) {
                     // Drafts haven't previously been sent
@@ -599,7 +619,6 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
                     $submission = $assignmentbase->get_submission($eventdata->userid);
                     $modulecontext = get_context_instance(CONTEXT_MODULE, $eventdata->cmid);
                     $fs = get_file_storage();
-                    $result = true;
                     $files = $fs->get_area_files($modulecontext->id, 'mod_'.$modulename,
                                                  'submission', $submission->id, "timemodified", false);
                     if ($files) {
@@ -615,8 +634,8 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
                             $result = $fileresult && $result;
                         }
                     }
-                    return $result;
                 }
+                return $result;
             }
 
             // Assignment-module focused functionality:
@@ -626,30 +645,44 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
                 return true;
             }
 
+            // Text is attached
+            $result = true;
+            if (!empty($eventdata->content)) {
+            	$file = turnitin_create_temp_file($cmid, $eventdata);
+            	$pid = plagiarism_update_record($cmid, $eventdata->userid, $file->identifier);
+            	if (!empty($pid)) {
+            		$fileresult = turnitin_send_file($pid, $plagiarismsettings, $file);
+            	} else {
+            		$fileresult = true; //file already been sent.
+            	}
+            	$result = $result && $fileresult;
+            	//unlink($file->filepath); //delete temp file.
+            }
             // Normal scenario - this is an upload event with one or more attached files
             // Attached file(s) are to be immediately submitted to TII
-            $result = true;
-            foreach ($eventdata->pathnamehashes as $hash) {
-                $fileresult = false;
-                $fs = get_file_storage();
-                $efile = $fs->get_file_by_hash($hash);
+            if (!empty($eventdata->pathnamehashes)) {
+                foreach ($eventdata->pathnamehashes as $hash) {
+                	$fileresult = false;
+                	$fs = get_file_storage();
+                	$efile = $fs->get_file_by_hash($hash);
 
-                if (empty($efile)) {
-                    mtrace("nofilefound!");
-                    continue;
-                } else if ($efile->get_filename() ==='.') {
-                    // This is a directory - nothing to do.
-                    continue;
-                }
+                	if (empty($efile)) {
+                	    mtrace("nofilefound!");
+                	    continue;
+                	} else if ($efile->get_filename() ==='.') {
+                	    // This is a directory - nothing to do.
+                	    continue;
+                	}
 
-                //check if this particular file has already been submitted.
-                $pid = plagiarism_update_record($cmid, $eventdata->userid, $efile->get_pathnamehash());
-                if (!empty($pid)) {
-                    $fileresult = turnitin_send_file($pid, $plagiarismsettings, $efile);
-                } else {
-                    $fileresult = true; //file already been sent.
-                }
-                $result = $result && $fileresult;
+                	// Check if this particular file has already been submitted.
+                	$pid = plagiarism_update_record($cmid, $eventdata->userid, $efile->get_pathnamehash());
+                	if (!empty($pid)) {
+                	    $fileresult = turnitin_send_file($pid, $plagiarismsettings, $efile);
+                    } else {
+                	    $fileresult = true; //file already been sent.
+                	}
+                	$result = $result && $fileresult;
+             	}
             }
             return $result;
         } else if ($eventdata->eventtype=="quizattempt") {
@@ -690,6 +723,32 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
 }
 
 //functions specific to the Turnitin plagiarism tool
+
+/**
+ * Creates a temporary file to be sent to Turnitin
+ * @param int $cmid  - course module id
+ * @param $eventdata
+ * @return file
+ */
+function turnitin_create_temp_file($cmid, $eventdata) {
+	global $CFG;
+	if (!check_dir_exists($CFG->dataroot."/temp/urkund", true, true)) {
+        mkdir($CFG->dataroot."/temp/urkund", 0700);
+	}
+	$filename = "content-" . $eventdata->courseid . "-" . $cmid . "-" . $eventdata->userid . ".html";
+	$filepath = $CFG->dataroot."/temp/turnitin/" . $filename;
+	$fd = fopen($filepath, 'wb');   //create if not exist, write binary
+	$eventdata->content = '<html>' . $eventdata->content . '</html>';
+	fwrite($fd, $eventdata->content);
+	fclose($fd);
+	$file = new stdclass();
+	$file->type = "tempturnitin";
+	$file->filename = $filename;
+	$file->timestamp = time();
+	$file->identifier = sha1_file($filepath);
+	$file->filepath =  $filepath;
+	return $file;
+}
 
 /**
  * Generates a url including md5 for use in posting to Turnitin API.
@@ -891,9 +950,11 @@ function turnitin_post_data($tii, $plagiarismsettings, $file='', $pid='') {
             $status = new SimpleXMLElement($xml);
         } else {
             //We cannot access the file location of $file directly - we must create a temp file to point to instead
-            $filename = $CFG->dataroot."/plagiarism/".time().$file->get_filename(); //unique name for this file.
+            $filename = (!empty($file->filename)) ? $file->filename : $file->get_filename();
+            $filename = $CFG->dataroot."/plagiarism/".time().$filename; //unique name for this file.
             $fh = fopen($filename, 'w');
-            fwrite($fh, $file->get_content());
+            $filecontents = (!empty($file->filepath)) ? file_get_contents($file->filepath) : $file->get_content();
+            fwrite($fh, $filecontents);
             fclose($fh);
             $fields['pdata'] = '@'.$filename;
             $c = new curl(array('proxy'=>true));
@@ -1088,14 +1149,17 @@ function turnitin_send_file($pid, $plagiarismsettings, $file) {
         return true;
     }
 
+    $filename = (!empty($file->filename)) ? $file->filename : $file->get_filename();
+    $filetime = (!empty($file->timestamp)) ? $file->timestamp : $file->get_timemodified();
     // Now try to submit this uploaded file to Tii! (fid=5).
     $tii['fid']     = TURNITIN_SUBMIT_PAPER;
-    $tii['ptl']     = $file->get_filename(); //paper title
-    if ($file->get_timemodified() < $dtstart) { //this file was submitted before the assignment was created in Turnitin - probably during a test rather than real-use.
+    $tii['ptl']     = $filename; //paper title
+    if ($filetime < $dtstart) { //this file was submitted before the assignment was created in Turnitin - probably during a test rather than real-use.
         $tii['submit_date'] = rawurlencode(date('Y-m-d H:i:s', time()));
     } else {
-        $tii['submit_date'] = rawurlencode(date('Y-m-d H:i:s', $file->get_timemodified()));
+        $tii['submit_date'] = rawurlencode(date('Y-m-d H:i:s', $filetime));
     }
+
     $tii['ptype']   = '2'; //filetype
     $tii['pfn']     = $tii['ufn'];
     $tii['pln']     = $tii['uln'];
@@ -1912,6 +1976,16 @@ function turnitin_event_file_uploaded($eventdata) {
  */
 function turnitin_event_files_done($eventdata) {
     $eventdata->eventtype = 'file_done';
+    $turnitin = new plagiarism_plugin_turnitin();
+    return $turnitin->event_handler($eventdata);
+}
+
+/**
+ * @param $eventdata
+ * @return bool
+ */
+function turnitin_event_content_uploaded($eventdata) {
+    $eventdata->eventtype = 'content_uploaded';
     $turnitin = new plagiarism_plugin_turnitin();
     return $turnitin->event_handler($eventdata);
 }

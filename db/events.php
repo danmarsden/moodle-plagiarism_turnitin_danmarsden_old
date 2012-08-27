@@ -29,6 +29,11 @@ $handlers = array (
         'handlerfunction'  => 'turnitin_event_files_done',
         'schedule'         => 'cron'
     ),
+    'assessable_content_uploaded' => array (
+        'handlerfile'      => '/plagiarism/turnitin/lib.php',
+        'handlerfunction'  => 'turnitin_event_content_uploaded',
+        'schedule'         => 'cron'
+    ),
     'mod_created' => array (
         'handlerfile'      => '/plagiarism/turnitin/lib.php',
         'handlerfunction'  => 'turnitin_event_mod_created',
