@@ -1287,6 +1287,9 @@ function turnitin_create_assignment($plagiarismsettings, $plagiarismvalues, $eve
         if (!empty($module->timedue) && ($module->timedue > strtotime('+10 minutes'))) {
             $dtdue = $module->timedue;
             $tii['dtdue'] = rawurlencode(date($turnitindateformat, $dtdue));
+        } else if (!empty($module->duedate) && ($module->duedate > strtotime('+10 minutes'))) {
+            $dtdue = $module->duedate;
+            $tii['dtdue'] = rawurlencode(date($turnitindateformat, $dtdue));
         } else {
             $dtdue = strtotime('+1 year');
             $tii['dtdue'] = rawurlencode(date($turnitindateformat, $dtdue));
@@ -1479,6 +1482,9 @@ function turnitin_update_assignment($plagiarismsettings, $plagiarismvalues, $eve
         if (!empty($module->timedue) && ($module->timedue > strtotime('+10 minutes'))) {
             $dtdue = $module->timedue;
             $tii['dtdue'] = rawurlencode(date($turnitindateformat, $dtdue));
+        } else if (!empty($module->duedate) && ($module->duedate > strtotime('+10 minutes'))) {
+            $dtdue = $module->duedate;
+            $tii['dtdue'] = rawurlencode(date($turnitindateformat, $dtdue));
         } else {
             $dtdue = strtotime('+1 year');
             $tii['dtdue'] = rawurlencode(date($turnitindateformat, $dtdue));
@@ -1576,7 +1582,8 @@ function turnitin_get_grademark_link($plagiarismfile, $course, $module, $plagiar
         return $output;
     }
     if (empty($plagiarismfile->externalstatus) ||
-       ($USER->id <> $plagiarismfile->userid && !empty($module->timedue) && $module->timedue > time())) {
+       ($USER->id <> $plagiarismfile->userid && !empty($module->timedue) && $module->timedue > time()) ||
+       ($USER->id <> $plagiarismfile->userid && !empty($module->duedate) && $module->duedate > time())) {
         //Grademark isn't available yet - don't provide link
         $output = '<img src="'.$OUTPUT->pix_url('i/grademark-grey').'">';
     } else {
