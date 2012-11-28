@@ -1056,6 +1056,21 @@ function turnitin_send_file($pid, $plagiarismsettings, $file) {
     if (isset($tiixml->rcode[0])) {
         turnitin_update_file_status_code($pid, $tiixml->rcode[0]);
     }
+    if (isset($tiixml->rcode[0]) && $tiixml->rcode[0] == TURNITIN_RESP_ASSIGN_NOTEXISTS) {
+        //first delete old turnitin_assignid and dtstart
+        $DB->delete_records('plagiarism_turnitin_config', array('cm'=>$cm->id, 'name'=>'turnitin_assignid'));
+        $DB->delete_records('plagiarism_turnitin_config', array('cm'=>$cm->id, 'name'=>'turnitin_dtstart'));
+        //this file is being handled before the assignment was created in Turnitin - we need to create the assignment/course.
+        //use create function instead
+        mtrace('assignment does not exist, probably an old re-used assignment.');
+        $plagiarismvalues = $DB->get_records_menu('plagiarism_turnitin_config', array('cm'=>$cmid), '', 'name,value');
+        $eventdata = new stdClass();
+        $eventdata->courseid = $course->id;
+        $eventdata->cmid = $cm->id;
+        $eventdata->modulename = $moduletype;
+        $eventdata->usedid = get_admin()->id;
+        turnitin_create_assignment($plagiarismsettings, $plagiarismvalues, $eventdata);
+    }
     if (empty($tiixml->rcode[0]) or $tiixml->rcode[0] <> TURNITIN_RESP_USER_JOINED) { //this is the success code for uploading a file. - we need to return the oid and save it!
         mtrace('could not enrol user in turnitin class code:'.$tiixml->rcode[0].' '.$tiixml->rmessage);
         turnitin_end_session($user, $plagiarismsettings, $tiisession);
@@ -1078,6 +1093,21 @@ function turnitin_send_file($pid, $plagiarismsettings, $file) {
 
     if (isset($tiixml->rcode[0])) {
         turnitin_update_file_status_code($pid, $tiixml->rcode[0]);
+    }
+    if (isset($tiixml->rcode[0]) && $tiixml->rcode[0] == TURNITIN_RESP_ASSIGN_NOTEXISTS) {
+        //first delete old turnitin_assignid and dtstart
+        $DB->delete_records('plagiarism_turnitin_config', array('cm'=>$cm->id, 'name'=>'turnitin_assignid'));
+        $DB->delete_records('plagiarism_turnitin_config', array('cm'=>$cm->id, 'name'=>'turnitin_dtstart'));
+        //this file is being handled before the assignment was created in Turnitin - we need to create the assignment/course.
+        //use create function instead
+        mtrace('assignment does not exist, probably an old re-used assignment.');
+        $plagiarismvalues = $DB->get_records_menu('plagiarism_turnitin_config', array('cm'=>$cmid), '', 'name,value');
+        $eventdata = new stdClass();
+        $eventdata->courseid = $course->id;
+        $eventdata->cmid = $cm->id;
+        $eventdata->modulename = $moduletype;
+        $eventdata->usedid = get_admin()->id;
+        turnitin_create_assignment($plagiarismsettings, $plagiarismvalues, $eventdata);
     }
     if ($tiixml->rcode[0] == TURNITIN_RESP_PAPER_SENT) { // We need to return the oid and save it!
         $plagiarism_file = $DB->get_record('plagiarism_turnitin_files', array('id'=>$pid)); // Make sure we get latest record as it may have changed
