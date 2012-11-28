@@ -75,6 +75,7 @@ define('TURNITIN_RESP_ASSIGN_MODIFIED', 42); // Assignment modified
 define('TURNITIN_RESP_ASSIGN_DELETED', 43); // Assignment deleted
 define('TURNITIN_RESP_PAPER_SENT', 51); // paper submitted
 define('TURNITIN_RESP_SCORE_RECEIVED', 61); // Originality score retrieved.
+define('TURNITIN_RESP_ASSIGN_NOTEXISTS', 206); // Assignment doesn't exist.
 define('TURNITIN_RESP_ASSIGN_EXISTS', 419); // Assignment already exists.
 define('TURNITIN_RESP_SCORE_NOT_READY', 415);
 
@@ -1563,6 +1564,15 @@ function turnitin_update_assignment($plagiarismsettings, $plagiarismvalues, $eve
             mtrace('assignment updated on Turnitin: '.$tii['assignid']);
         } else {
             mtrace('Error: '.$tiixml->rcode[0].' '.$tiixml->rmessage.' ['.$tii['assign.'].']');
+            if ($tiixml->rcode[0] == TURNITIN_RESP_ASSIGN_NOTEXISTS) {
+                turnitin_end_session($user, $plagiarismsettings, $tiisession);
+                //clear eventtype
+                unset($eventdata->eventtype);
+                //use create function instead
+                mtrace('assignment does not exist, try to create it again');
+                return turnitin_create_assignment($plagiarismsettings, $plagiarismvalues, $eventdata);
+            }
+
             $result = false;
         }
     }
