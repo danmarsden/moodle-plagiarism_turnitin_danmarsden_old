@@ -983,6 +983,25 @@ function turnitin_send_file($pid, $plagiarismsettings, $file) {
         $DB->delete_records('plagiarism_turnitin_files', array('id'=>$plagiarism_file->id));
         return true; // Do not reattempt - no hope of success.
     }
+
+    //check that course and assignment have both been created correctly.
+    $tiicid = get_config('plagiarism_turnitin_course', $course->id);
+    $params = array('cm' => $cm->id, 'name' => 'turnitin_assignid');
+    $turnitin_assignid = $DB->get_field('plagiarism_turnitin_config', 'value', $params);
+
+    if (empty($tiicid) or (empty($turnitin_assignid))) {
+        //this file is being handled before the assignment was created in Turnitin - we need to create the assignment/course.
+        //use create function instead
+        mtrace('assignment does not exist, Turnitin probably enabled during restore');
+        $plagiarismvalues = $DB->get_records_menu('plagiarism_turnitin_config', array('cm'=>$cmid), '', 'name,value');
+        $eventdata = new stdClass();
+        $eventdata->courseid = $course->id;
+        $eventdata->cmid = $cm->id;
+        $eventdata->modulename = $moduletype;
+        $eventdata->usedid = get_admin()->id;
+        turnitin_create_assignment($plagiarismsettings, $plagiarismvalues, $eventdata);
+    }
+
     $dtstart = $DB->get_record('plagiarism_turnitin_config', array('cm' => $cm->id, 'name' => 'turnitin_dtstart'));
     if (!empty($dtstart) && $dtstart->value > time()) {
         mtrace("Warning: $moduletype start date is too early ".date('Y-m-d H:i:s', $dtstart->value)." in course $course->shortname $moduletype $module->name will delay sending files until next cron");
@@ -995,7 +1014,7 @@ function turnitin_send_file($pid, $plagiarismsettings, $file) {
     $tii = array();
     $tii['utp']      = TURNITIN_STUDENT;
     $tii = turnitin_get_tii_user($tii, $user);
-    $tii['cid']      = get_config('plagiarism_turnitin_course', $course->id);
+    $tii['cid']      = $tiicid;
     $tii['ctl']      = (strlen($course->shortname) > 45 ? substr($course->shortname, 0, 45) : $course->shortname);
     $tii['ctl']      = (strlen($tii['ctl']) > 5 ? $tii['ctl'] : $tii['ctl']."_____");
     $tii['fcmd']     = TURNITIN_RETURN_XML;
@@ -1023,8 +1042,7 @@ function turnitin_send_file($pid, $plagiarismsettings, $file) {
     }
 
     // Now try to enrol user in class under the given account (fid=3).
-    $params = array('cm' => $cm->id, 'name' => 'turnitin_assignid');
-    $turnitin_assignid = $DB->get_field('plagiarism_turnitin_config', 'value', $params);
+
     if (!empty($turnitin_assignid)) {
         $tii['assignid'] = $turnitin_assignid;
     }
