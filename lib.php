@@ -1081,7 +1081,7 @@ function turnitin_send_file($pid, $plagiarismsettings, $file) {
     $tii['fid']     = TURNITIN_SUBMIT_PAPER;
     $tii['ptl']     = $file->get_filename(); //paper title
     if ($file->get_timemodified() < $dtstart) { //this file was submitted before the assignment was created in Turnitin - probably during a test rather than real-use.
-        $tii['submit_date'] = time();
+        $tii['submit_date'] = rawurlencode(date('Y-m-d H:i:s', time()));
     } else {
         $tii['submit_date'] = rawurlencode(date('Y-m-d H:i:s', $file->get_timemodified()));
     }
