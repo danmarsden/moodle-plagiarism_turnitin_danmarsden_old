@@ -1386,7 +1386,7 @@ function turnitin_create_assignment($plagiarismsettings, $plagiarismvalues, $eve
         // exclude small matches
         $tii['exclude_type'] = (isset($plagiarismvalues['plagiarism_exclude_matches']) ? $plagiarismvalues['plagiarism_exclude_matches'] : '0');
         $tii['exclude_value'] = (isset($plagiarismvalues['plagiarism_exclude_matches_value']) ? $plagiarismvalues['plagiarism_exclude_matches_value'] : '');
-        $tii['anon'] = (empty($plagiarismvalues['plagiarism_anonymity']) ? '0' : '1');
+        $tii['anon'] = 0;
         // send request to Turnitin
         $tiixml = turnitin_post_data($tii, $plagiarismsettings);
         if ($tiixml->rcode[0] == TURNITIN_RESP_ASSIGN_CREATED && !empty($tiixml->assignmentid[0])) {
@@ -1581,7 +1581,7 @@ function turnitin_update_assignment($plagiarismsettings, $plagiarismvalues, $eve
         // exclude small matches
         $tii['exclude_type'] = (isset($plagiarismvalues['plagiarism_exclude_matches']) ? $plagiarismvalues['plagiarism_exclude_matches'] : '0');
         $tii['exclude_value'] = (isset($plagiarismvalues['plagiarism_exclude_matches_value']) ? $plagiarismvalues['plagiarism_exclude_matches_value'] : '');
-        $tii['anon'] = (empty($plagiarismvalues['plagiarism_anonymity']) ? '0' : '1');
+        $tii['anon'] = 0;
         // send request to Turnitin
         $tiixml = turnitin_post_data($tii, $plagiarismsettings);
         if ($tiixml->rcode[0] == TURNITIN_RESP_ASSIGN_MODIFIED) {
@@ -1731,7 +1731,7 @@ function turnitin_get_form_elements($mform) {
     $mform->addElement('text', 'plagiarism_exclude_matches_value', '');
     $mform->addRule('plagiarism_exclude_matches_value', null, 'numeric', null, 'client');
     $mform->disabledIf('plagiarism_exclude_matches_value', 'plagiarism_exclude_matches', 'eq', 0);
-    $mform->addElement('select', 'plagiarism_anonymity', get_string("anonymity", "plagiarism_turnitin"), $ynoptions);
+    $mform->addElement('hidden', 'plagiarism_anonymity', 0);
     $mform->addHelpButton('plagiarism_anonymity', 'anonymity', 'plagiarism_turnitin');
 }
 
