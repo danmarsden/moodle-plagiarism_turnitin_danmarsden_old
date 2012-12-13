@@ -29,6 +29,8 @@ require_once($CFG->libdir.'/plagiarismlib.php');
 require_once($CFG->dirroot.'/plagiarism/turnitin/lib.php');
 require_once('turnitin_form.php');
 
+$fix19assignments = optional_param('fix19', 0, PARAM_INT);
+
 require_login();
 admin_externalpage_setup('plagiarismturnitin');
 $PAGE->set_url('/plagiarism/turnitin/migrateassignment22.php');
@@ -38,6 +40,53 @@ $currenttab='turnitinmigrate';
 require_once('turnitin_tabs.php');
 
 echo $OUTPUT->box(get_string('turnitinmigrate_help', 'plagiarism_turnitin'));
+
+if ($fix19assignments) { //script to fix 19 legacy assignments that weren't migrated in 2.2
+    $fs = get_file_storage();
+    //now do tii_files table
+    $tii_files = $DB->get_records('tii_files_legacy');
+    if (!empty($tii_files)) {
+        $i = 0;
+        foreach ($tii_files as $tf) {
+            //first check if this file already exists in plagiarism_turnitin_files
+            if ($DB->record_exists('plagiarism_turnitin_files', array('externalid' => $tf->tii))) {
+                echo "alreadyexists";
+                continue;
+            }
+            $newf = new stdClass();
+            $newf->userid = $tf->userid;
+            $newf->externalid = $tf->tii;
+            $newf->exernalstatus = 0;
+            $newf->statuscode = $tf->tiicode;
+            $newf->similarityscore = $tf->tiiscore;
+            $newf->legacyteacher = 1;
+
+            //now get oldcm based on course and module from log
+            $oldcm = $DB->get_field('log', 'cmid', array('course' => $tf->course, 'action' => 'delete mod', 'info' => 'assignment '.$tf->instance));
+            $newcm = $DB->get_field('log', 'cmid', array('course' => $tf->course, 'action' => 'view', 'module' => 'assign', 'info' => $oldcm));
+            if (!empty($oldcm) && !empty($newcm)) {
+                $newf->cm = $newcm;
+                //now get the pathnamehash for this old file
+                //first get all the files from the assignment module.
+                $modulecontext = context_module::instance($newcm);
+                //get instanceid of this assign
+                $instanceid = $DB->get_field('course_modules', 'instance', array('id' => $newcm));
+                $submission = $DB->get_record('assign_submission', array('assignment'=>$instanceid, 'userid'=>$tf->userid));
+                $files = $fs->get_area_files($modulecontext->id, 'assignsubmission_file', 'submission_files', $submission->id, "id", false);
+                foreach ($files as $file) {
+                    if ($file->get_filename()==$tf->filename) {
+                        $newf->identifier = $file->get_pathnamehash();
+                    }
+                }
+                if (!empty($newf->identifier)) {
+                    $i++;
+                    $DB->insert_record('plagiarism_turnitin_files', $newf);
+                }
+            }
+        }
+        echo "migrated ".$i . "files";
+    }
+}
 
 if ((data_submitted()) && confirm_sesskey()) {
     $sql = "SELECT DISTINCT cmid, info FROM {log} WHERE module='assign' AND action='view'";
