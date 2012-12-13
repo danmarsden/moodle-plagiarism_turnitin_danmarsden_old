@@ -76,6 +76,7 @@ define('TURNITIN_RESP_ASSIGN_DELETED', 43); // Assignment deleted
 define('TURNITIN_RESP_PAPER_SENT', 51); // paper submitted
 define('TURNITIN_RESP_SCORE_RECEIVED', 61); // Originality score retrieved.
 define('TURNITIN_RESP_ASSIGN_NOTEXISTS', 206); // Assignment doesn't exist.
+define('TURNITIN_RESP_SCORE_OBJECT_NOT_FOUND', 212); //Assignment object not found for this user.
 define('TURNITIN_RESP_ASSIGN_EXISTS', 419); // Assignment already exists.
 define('TURNITIN_RESP_SCORE_NOT_READY', 415);
 
@@ -530,6 +531,16 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
                     debugging('file resubmit attempted but file not found id:'.$item->id, DEBUG_DEVELOPER);
                 }
             }
+        }
+        //get list of files in a 212 state and attempts = 0 and change them to a 51 state. - many 212 files were just checked too early.
+        $sql = "SELECT tf.*
+                    FROM {plagiarism_turnitin_files} tf, {course_modules} cm
+                    WHERE tf.cm = cm.id AND
+                    tf.statuscode='".TURNITIN_RESP_SCORE_OBJECT_NOT_FOUND."' AND tf.attempt = 0";
+        $items = $DB->get_records_sql($sql);
+        foreach ($items as $item) {
+            $item->statuscode = TURNITIN_RESP_PAPER_SENT;
+            $DB->update_record('plagiarism_turnitin_files', $item);
         }
     }
 
@@ -1208,11 +1219,20 @@ function turnitin_get_scores($plagiarismsettings) {
             } else if ($tiixml->rcode[0] == TURNITIN_RESP_SCORE_NOT_READY) {
                 mtrace('similarity report not available yet for fileid:'.$file->id. " code:".$tiixml->rcode[0]);
             } else if (!empty($tiixml->rcode[0])) {
-                mtrace('similarity report check failed for fileid:'.$file->id. " code:".$tiixml->rcode[0]);
-                $file->statuscode = (string)$tiixml->rcode[0];
-                if (! $DB->update_record('plagiarism_turnitin_files', $file)) {
-                    debugging("Error updating turnitin_files record");
+                if ($tiixml->rcode[0] == TURNITIN_RESP_SCORE_OBJECT_NOT_FOUND) {
+                    $maxtries = 10; //check this many times for an object.
+                    if ($file->attempt >= $maxtries) {
+                        mtrace('Turnitin couldn\'t find this file and we have tried '.$file->attempt.' times fileid:'.$file->id. ' code:'.$tiixml->rcode[0]);
+                        $file->statuscode = (string)$tiixml->rcode[0];
+                    } else {
+                        mtrace('Turnitin couldn\'t find this file yet so will try again next cron, attempt'.$file->attempt.'. fileid:'.$file->id. " code:".$tiixml->rcode[0]);
+                        $file->attempt = $file->attempt+1;
+                    }
+                } else {
+                    mtrace('similarity report check failed for fileid:'.$file->id. " code:".$tiixml->rcode[0]);
+                    $file->statuscode = (string)$tiixml->rcode[0];
                 }
+                $DB->update_record('plagiarism_turnitin_files', $file);
             }
         }
     }
