@@ -36,7 +36,7 @@ admin_externalpage_setup('plagiarismturnitin');
 $PAGE->set_url('/plagiarism/turnitin/migrateassignment22.php');
 
 echo $OUTPUT->header();
-echo $OUTPUT->motification("NASTY HACK ALERT - this script is a nasty hack that uses the logs table to translate old assignment ids to new 2.3 assignment ids - use at own risk!!!!");
+echo $OUTPUT->notification("NASTY HACK ALERT - this script is a nasty hack that uses the logs table to translate old assignment ids to new 2.3 assignment ids - use at own risk!!!!");
 $currenttab='turnitinmigrate';
 require_once('turnitin_tabs.php');
 
