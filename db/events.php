@@ -49,5 +49,10 @@ $handlers = array (
         'handlerfunction'  => 'turnitin_event_mod_deleted',
         'schedule'         => 'cron'
     ),
+    'assessable_submitted' => array (
+        'handlerfile'      => '/plagiarism/turnitin/lib.php',
+        'handlerfunction'  => 'turnitin_event_assessable_submitted',
+        'schedule'         => 'cron'
+    ),
 
 );

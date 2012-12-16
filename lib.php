@@ -583,7 +583,8 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
             return turnitin_delete_assignment($plagiarismsettings, $plagiarismvalues, $eventdata);
         } else if ($eventdata->eventtype=="file_uploaded" ||
         		   $eventdata->eventtype=="content_uploaded" ||
-        		   $eventdata->eventtype=="file_done") {
+        		   $eventdata->eventtype=="file_done" ||
+                   ($eventdata->eventtype == 'assessable_submitted' && $eventdata->params['submission_editable'] == false)) {
             // Check if the module associated with this event still exists
             $cm = $DB->get_record('course_modules', array('id' => $eventdata->cmid));
 
@@ -2016,6 +2017,12 @@ function turnitin_event_mod_updated($eventdata) {
  */
 function turnitin_event_mod_deleted($eventdata) {
     $eventdata->eventtype = 'mod_deleted';
+    $turnitin = new plagiarism_plugin_turnitin();
+    return $turnitin->event_handler($eventdata);
+}
+
+function turnitin_event_assessable_submitted($eventdata) {
+    $eventdata->eventtype = 'assessable_submitted';
     $turnitin = new plagiarism_plugin_turnitin();
     return $turnitin->event_handler($eventdata);
 }
