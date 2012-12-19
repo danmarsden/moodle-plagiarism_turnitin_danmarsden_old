@@ -197,8 +197,8 @@ function xmldb_plagiarism_turnitin_upgrade($oldversion) {
         require_once($CFG->dirroot.'/plagiarism/turnitin/lib.php');
         // Add config turnitin_assign to handle title renames
         $sql = "SELECT cm.id AS cmid, m.name AS modulename, cm.instance, cm.course
-                FROM mdl_course_modules cm, mdl_modules m
-                WHERE cm.id IN (SELECT tc.cm FROM mdl_plagiarism_turnitin_config tc
+                FROM {course_modules} cm, {modules} m
+                WHERE cm.id IN (SELECT tc.cm FROM {plagiarism_turnitin_config} tc
                                 WHERE tc.name = 'turnitin_assignid'
                                 )
                 AND cm.module = m.id
