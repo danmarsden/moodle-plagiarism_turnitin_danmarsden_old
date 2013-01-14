@@ -410,18 +410,35 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
 
         if (!in_array($course->id, $existingcourses)) {
             // Turnitin doesn't (yet) know that this user is a teacher in this course, Tell them.
-            $tii = array();
-            $tii['utp']      = TURNITIN_INSTRUCTOR;
-            $tii = turnitin_get_tii_user($tii, $USER);
-            $tii['cid']      = $cid;
-            $tii['ctl']      = (strlen($course->shortname) > 45 ? substr($course->shortname, 0, 45) : $course->shortname);
-            $tii['ctl']      = (strlen($tii['ctl']) > 5 ? $tii['ctl'] : $tii['ctl']."_____");
-            $tii['fcmd'] = TURNITIN_RETURN_XML;
-            $tii['fid']  = TURNITIN_CREATE_CLASS;
-            $tiixml = plagiarism_get_xml(turnitin_get_url($tii, $plagiarismsettings));
-            if ($tiixml->rcode[0] != TURNITIN_RESP_CLASS_CREATED) {
-                return $OUTPUT->notification(get_string('errorassigninguser','plagiarism_turnitin'));
+
+            //check that course and assignment have both been created correctly.
+            $params = array('cm' => $cm->id, 'name' => 'turnitin_assignid');
+            $turnitin_assignid = $DB->get_field('plagiarism_turnitin_config', 'value', $params);
+
+            if (empty($cid) or (empty($turnitin_assignid))) {
+                //this file is being handled before the assignment was created in Turnitin - we need to create the assignment/course.
+                $plagiarismvalues = $DB->get_records_menu('plagiarism_turnitin_config', array('cm'=>$cm->id), '', 'name,value');
+                $eventdata = new stdClass();
+                $eventdata->courseid = $course->id;
+                $eventdata->cmid = $cm->id;
+                $eventdata->modulename = $DB->get_field('modules', 'name', array('id' => $cm->module));
+                $eventdata->userid = $USER->id;
+                turnitin_create_assignment($plagiarismsettings, $plagiarismvalues, $eventdata);
+            } else { // Class and assignment exist - just add this user.
+                $tii = array();
+                $tii['utp']      = TURNITIN_INSTRUCTOR;
+                $tii = turnitin_get_tii_user($tii, $USER);
+                $tii['cid']      = $cid;
+                $tii['ctl']      = (strlen($course->shortname) > 45 ? substr($course->shortname, 0, 45) : $course->shortname);
+                $tii['ctl']      = (strlen($tii['ctl']) > 5 ? $tii['ctl'] : $tii['ctl']."_____");
+                $tii['fcmd'] = TURNITIN_RETURN_XML;
+                $tii['fid']  = TURNITIN_CREATE_CLASS;
+                $tiixml = plagiarism_get_xml(turnitin_get_url($tii, $plagiarismsettings));
+                if ($tiixml->rcode[0] != TURNITIN_RESP_CLASS_CREATED) {
+                    return $OUTPUT->notification(get_string('errorassigninguser','plagiarism_turnitin'));
+                }
             }
+
             $existingcourses[] = $course->id;
             $newcoursecache =  implode(',', $existingcourses);
             // Now update our record of what teacherships TII knows about:
@@ -1010,7 +1027,7 @@ function turnitin_send_file($pid, $plagiarismsettings, $file) {
         $eventdata->courseid = $course->id;
         $eventdata->cmid = $cm->id;
         $eventdata->modulename = $moduletype;
-        $eventdata->usedid = get_admin()->id;
+        $eventdata->userid = get_admin()->id;
         turnitin_create_assignment($plagiarismsettings, $plagiarismvalues, $eventdata);
     }
 
@@ -1079,7 +1096,7 @@ function turnitin_send_file($pid, $plagiarismsettings, $file) {
         $eventdata->courseid = $course->id;
         $eventdata->cmid = $cm->id;
         $eventdata->modulename = $moduletype;
-        $eventdata->usedid = get_admin()->id;
+        $eventdata->userid = get_admin()->id;
         turnitin_create_assignment($plagiarismsettings, $plagiarismvalues, $eventdata);
     }
     if (empty($tiixml->rcode[0]) or $tiixml->rcode[0] <> TURNITIN_RESP_USER_JOINED) { //this is the success code for uploading a file. - we need to return the oid and save it!
@@ -1117,7 +1134,7 @@ function turnitin_send_file($pid, $plagiarismsettings, $file) {
         $eventdata->courseid = $course->id;
         $eventdata->cmid = $cm->id;
         $eventdata->modulename = $moduletype;
-        $eventdata->usedid = get_admin()->id;
+        $eventdata->userid = get_admin()->id;
         turnitin_create_assignment($plagiarismsettings, $plagiarismvalues, $eventdata);
     }
     if ($tiixml->rcode[0] == TURNITIN_RESP_PAPER_SENT) { // We need to return the oid and save it!
