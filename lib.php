@@ -27,6 +27,8 @@
 if (!defined('MOODLE_INTERNAL')) {
     die('Direct access to this script is forbidden.');    ///  It must be included from a Moodle page
 }
+define ('TURNITIN_CACHEFIELDNAME', 'turnitinteachercoursecache');
+
 define('PLAGIARISM_TII_SHOW_NEVER', 0);
 define('PLAGIARISM_TII_SHOW_ALWAYS', 1);
 define('PLAGIARISM_TII_SHOW_CLOSED', 2);
@@ -379,7 +381,6 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
 
         $outputhtml = '';
 
-        $userprofilefieldname = 'turnitinteachercoursecache';
         if (!$plagiarismsettings = $this->get_settings()) {
             return;
         }
@@ -401,7 +402,7 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
                     ' INNER JOIN {user_info_data} d ON d.fieldid = f.id ' .
                     'WHERE f.shortname = ? '.
                     ' AND d.userid = ? ';
-            $userprofiledetail = $DB->get_record_sql($sql, array($userprofilefieldname, $USER->id));
+            $userprofiledetail = $DB->get_record_sql($sql, array(TURNITIN_CACHEFIELDNAME, $USER->id));
             if (!empty($userprofiledetail)) {
                 $existingcourses = explode(',', $userprofiledetail->data);
                 $newrecord = false;
@@ -409,8 +410,8 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
                 $existingcourses = array();
                 $newrecord = true;
             }
-        } else if (!empty($USER->profile[$userprofilefieldname])) {
-            $existingcourses = explode(',', $USER->profile[$userprofilefieldname]);
+        } else if (!empty($USER->profile[TURNITIN_CACHEFIELDNAME])) {
+            $existingcourses = explode(',', $USER->profile[TURNITIN_CACHEFIELDNAME]);
             $newrecord = false;
         } else {
             $existingcourses = array();
@@ -419,7 +420,7 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
                    ' INNER JOIN {user_info_data} d ON d.fieldid = f.id ' .
                    ' WHERE f.shortname = ? ' .
                    ' AND d.userid = ? ';
-            if (!$DB->record_exists_sql($sql, array($userprofilefieldname, $USER->id))) {
+            if (!$DB->record_exists_sql($sql, array(TURNITIN_CACHEFIELDNAME, $USER->id))) {
                 $newrecord = true;
             } else {
                 $newrecord = false;
@@ -460,7 +461,7 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
             $existingcourses[] = $course->id;
             $newcoursecache =  implode(',', $existingcourses);
             // Now update our record of what teacherships TII knows about:
-            $userprofilefieldid = $DB->get_field('user_info_field', 'id', array('shortname'=>$userprofilefieldname));
+            $userprofilefieldid = $DB->get_field('user_info_field', 'id', array('shortname'=>TURNITIN_CACHEFIELDNAME));
             if ($newrecord) {
                 // New field - will need to insert a new record.
                 $userdata = new stdclass();
@@ -472,7 +473,7 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
                 $DB->set_field('user_info_data', 'data', $newcoursecache, array('userid'=>$USER->id, 'fieldid'=>$userprofilefieldid));
             }
 
-            $USER->profile[$userprofilefieldname] = $newcoursecache;
+            $USER->profile[TURNITIN_CACHEFIELDNAME] = $newcoursecache;
         }
 
         $tii = array();
@@ -1307,11 +1308,25 @@ function turnitin_get_scores($plagiarismsettings) {
                 //check if set to never display report to student - if so we need to obtain a teacher account and use it.
                 $never = $DB->get_field('plagiarism_turnitin_config', 'value', array('cm'=>$file->cm, 'name'=>'plagiarism_show_student_report'));
                 if (empty($never)) {
-                    //TODO: the student can't get at the report so we need to assign a teacher
-                    debugging("ERROR: the scores can't be retrieved for courseid: ".$course->id.
-                              ", cm:".$file->cm." please edit and resave the $moduletype as a teacher, ".
-                              "this will ensure all the correct settings have been made.");
-                    continue;
+                    //trigger update assignment to set mainteacher.
+                    $cm = $DB->get_record('course_modules', array('id' => $file->cm));
+                    $plagiarismvalues = $DB->get_records_menu('plagiarism_turnitin_config', array('cm'=>$cm->id), '', 'name,value');
+                    $eventdata = new stdClass();
+                    $eventdata->courseid = $cm->course;
+                    $eventdata->cmid = $cm->id;
+                    $eventdata->modulename = $DB->get_field('modules', 'name', array('id' => $cm->module));
+                    $eventdata->userid = get_admin()->id;
+                    turnitin_update_assignment($plagiarismsettings, $plagiarismvalues, $eventdata);
+                    $mainteacher = $DB->get_field('plagiarism_turnitin_config', 'value', array('cm'=>$file->cm, 'name'=>'turnitin_mainteacher'));
+                    if (!empty($mainteacher)) {
+                        $tii['utp']      = TURNITIN_INSTRUCTOR;
+                        $tii = turnitin_get_tii_user($tii, $mainteacher);
+                    } else {
+                        debugging("ERROR: the scores can't be retrieved for courseid: ".$course->id.
+                                  ", cm:".$file->cm." please edit and resave the $moduletype as a teacher, ".
+                                  "this will ensure all the correct settings have been made.");
+                        continue;
+                    }
                 }
                 $tii['utp']      = TURNITIN_STUDENT;
                 $tii = turnitin_get_tii_user($tii, $user);
@@ -1342,6 +1357,12 @@ function turnitin_get_scores($plagiarismsettings) {
                     } else {
                         mtrace('Turnitin couldn\'t find this file yet so will try again next cron, attempt'.$file->attempt.'. fileid:'.$file->id. " code:".$tiixml->rcode[0]);
                         $file->attempt = $file->attempt+1;
+                        // We should also dump the mainteacher on this course:
+                        //first clear the named mainteachers cache
+                        $userprofilefieldid = $DB->get_field('user_info_field', 'id', array('shortname'=> TURNITIN_CACHEFIELDNAME));
+                        $DB->set_field('user_info_data', 'data', '', array('userid'=> $mainteacher, 'fieldid'=>$userprofilefieldid));
+                        //now delete mainteacher for this cm
+                        $DB->delete_records('plagiarism_turnitin_config', 'value', array('cm'=>$file->cm, 'name'=>'turnitin_mainteacher'));
                     }
                 } else {
                     mtrace('similarity report check failed for fileid:'.$file->id. " code:".$tiixml->rcode[0]);
@@ -1717,6 +1738,13 @@ function turnitin_update_assignment($plagiarismsettings, $plagiarismvalues, $eve
             }
             if ($plagiarismvalues['turnitin_dtstart'] != $dtstart) {
                 $DB->set_field('plagiarism_turnitin_config', 'value', $dtstart, array('cm'=>$cm->id, 'name'=>'turnitin_dtstart'));
+            }
+            if (!$DB->record_exists('plagiarism_turnitin_config', array('cm'=>$cm->id, 'name'=>'turnitin_mainteacher'))){
+                $configval = new stdClass();
+                $configval->cm = $cm->id;
+                $configval->name = 'turnitin_mainteacher';
+                $configval->value = (string) $user->id;
+                $DB->insert_record('plagiarism_turnitin_config', $configval);
             }
             mtrace('assignment updated on Turnitin: '.$tii['assignid']);
         } else {
