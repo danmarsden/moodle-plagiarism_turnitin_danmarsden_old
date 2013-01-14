@@ -1297,7 +1297,7 @@ function turnitin_get_scores($plagiarismsettings) {
                         $userprofilefieldid = $DB->get_field('user_info_field', 'id', array('shortname'=> TURNITIN_CACHEFIELDNAME));
                         $DB->set_field('user_info_data', 'data', '', array('userid'=> $mainteacher, 'fieldid'=>$userprofilefieldid));
                         //now delete mainteacher for this cm
-                        $DB->delete_records('plagiarism_turnitin_config', 'value', array('cm'=>$file->cm, 'name'=>'turnitin_mainteacher'));
+                        $DB->delete_records('plagiarism_turnitin_config', array('cm'=>$file->cm, 'name'=>'turnitin_mainteacher'));
                     }
                 } else {
                     mtrace('similarity report check failed for fileid:'.$file->id. " code:".$tiixml->rcode[0]);
