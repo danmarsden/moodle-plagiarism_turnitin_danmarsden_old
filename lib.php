@@ -548,6 +548,8 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
                     }
                 } else {
                     debugging('file resubmit attempted but file not found id:'.$item->id, DEBUG_DEVELOPER);
+                    $item->attempt+1; // bump attempt so it doesn't keep trying.
+                    $DB->update_record('plagiarism_turnitin_files', $item);
                 }
             }
         }
@@ -1375,6 +1377,11 @@ function turnitin_create_assignment($plagiarismsettings, $plagiarismvalues, $eve
     if (!$user = $DB->get_record('user', array('id'=>$eventdata->userid))) {
         debugging("invalid userid! - :".$eventdata->userid, DEBUG_DEVELOPER);
         return true; //don't let this event kill cron
+    }
+    if (empty($plagiarismvalues['turnitin_assignid']) && !empty($plagiarismvalues['turnitin_assign'])) {
+        // invalid record (old bug created this state) - fix it.
+        $DB->delete_records('plagiarism_turnitin_config', array('cm' =>$cm->id, 'name' => 'turnitin_assign'));
+        $plagiarismvalues['turnitin_assign'] = '';
     }
     if (!empty($plagiarismvalues['turnitin_assignid']) || !empty($plagiarismvalues['turnitin_assign'])) { //shouldn't happen but just in case!
         debugging("assignment exists for cmid! - :".$eventdata->cmid, DEBUG_DEVELOPER);
