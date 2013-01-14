@@ -548,7 +548,7 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
                     }
                 } else {
                     debugging('file resubmit attempted but file not found id:'.$item->id, DEBUG_DEVELOPER);
-                    $item->attempt+1; // bump attempt so it doesn't keep trying.
+                    $item->attempt++; // bump attempt so it doesn't keep trying.
                     $DB->update_record('plagiarism_turnitin_files', $item);
                 }
             }
