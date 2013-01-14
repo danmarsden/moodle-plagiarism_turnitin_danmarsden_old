@@ -79,6 +79,7 @@ define('TURNITIN_RESP_ASSIGN_NOTEXISTS', 206); // Assignment doesn't exist.
 define('TURNITIN_RESP_SCORE_OBJECT_NOT_FOUND', 212); //Assignment object not found for this user.
 define('TURNITIN_RESP_ASSIGN_EXISTS', 419); // Assignment already exists.
 define('TURNITIN_RESP_SCORE_NOT_READY', 415);
+define('TURNITIN_RESP_LATE_ACCEPT', 1000);
 
 //get global class
 global $CFG;
@@ -559,6 +560,38 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
             $item->statuscode = TURNITIN_RESP_PAPER_SENT;
             $DB->update_record('plagiarism_turnitin_files', $item);
         }
+
+        // Fix 1000 status files - bug in late_accept_code setting causing 1000 errors with invalid late_accept flag.
+        $sql = "SELECT tf.*
+                    FROM {plagiarism_turnitin_files} tf, {course_modules} cm
+                    WHERE tf.cm = cm.id AND
+                    tf.statuscode='".TURNITIN_RESP_LATE_ACCEPT."' AND tf.attempt = 0";
+        $items = $DB->get_records_sql($sql);
+        $updatedcms = array();
+        foreach ($items as $item) {
+            //first update assignment to fix submit late setting
+            if (in_array($item->cm, $updatedcms)) { //check if we have already updated this cm.
+                $cm = $DB->get_record('course_modules', array('id' => $item->cm));
+                $plagiarismvalues = $DB->get_records_menu('plagiarism_turnitin_config', array('cm'=>$cm->id), '', 'name,value');
+                $eventdata = new stdClass();
+                $eventdata->courseid = $cm->course;
+                $eventdata->cmid = $cm->id;
+                $eventdata->modulename = $DB->get_field('modules', 'name', array('id' => $cm->module));
+                $eventdata->userid = get_admin()->id;
+                turnitin_update_assignment($plagiarismsettings, $plagiarismvalues, $eventdata);
+                $updatedcms[] = $cm->id;
+            }
+
+            //now try to resubmit the file:
+            $fs = get_file_storage();
+            $file = $fs->get_file_by_hash($item->identifier);
+            if ($file) {
+                $pid = plagiarism_update_record($item->cm, $item->userid, $file->get_pathnamehash(), $item->attempt+1);
+                if (!empty($pid)) {
+                    turnitin_send_file($pid, $plagiarismsettings, $file);
+                }
+            }
+        }
     }
 
     /**
@@ -1022,7 +1055,7 @@ function turnitin_send_file($pid, $plagiarismsettings, $file) {
         //this file is being handled before the assignment was created in Turnitin - we need to create the assignment/course.
         //use create function instead
         mtrace('assignment does not exist, Turnitin probably enabled during restore');
-        $plagiarismvalues = $DB->get_records_menu('plagiarism_turnitin_config', array('cm'=>$cmid), '', 'name,value');
+        $plagiarismvalues = $DB->get_records_menu('plagiarism_turnitin_config', array('cm'=>$cm->id), '', 'name,value');
         $eventdata = new stdClass();
         $eventdata->courseid = $course->id;
         $eventdata->cmid = $cm->id;
