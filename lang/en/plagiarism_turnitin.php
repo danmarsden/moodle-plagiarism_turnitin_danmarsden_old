@@ -122,3 +122,6 @@ $string['missingkey'] = 'Turnitin Secret Key not set!';
 $string['fileopenerror'] = 'error trying to open plagiarism XML file! {$a}';
 $string['beingprocessed'] = 'File was uploaded successfully and is currently being processed by turnitin';
 $string['errorlookup'] = 'See <a href ="http://docs.moodle.org/dev/Turnitin_errors">here</a> for an explanation of the code';
+$string['turnitinmigrate'] = 'Migrate 2.2 Assignments';
+$string['turnitinmigrate_help'] = 'If you have upgraded assignments to the new 2.3 mod_assign, this will try to re-link turnitin scores/reports generted in the old 2.2 Assignment with the upgraded 2.3 assignment module';
+$string['migrated'] = 'Turnitin settings migrated';
