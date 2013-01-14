@@ -1186,7 +1186,7 @@ function turnitin_send_file($pid, $plagiarismsettings, $file) {
         //this file is being handled before the assignment was created in Turnitin - we need to create the assignment/course.
         //use create function instead
         mtrace('assignment does not exist, probably an old re-used assignment.');
-        $plagiarismvalues = $DB->get_records_menu('plagiarism_turnitin_config', array('cm'=>$cmid), '', 'name,value');
+        $plagiarismvalues = $DB->get_records_menu('plagiarism_turnitin_config', array('cm'=>$cm->id), '', 'name,value');
         $eventdata = new stdClass();
         $eventdata->courseid = $course->id;
         $eventdata->cmid = $cm->id;
@@ -1227,7 +1227,7 @@ function turnitin_send_file($pid, $plagiarismsettings, $file) {
         //this file is being handled before the assignment was created in Turnitin - we need to create the assignment/course.
         //use create function instead
         mtrace('assignment does not exist, probably an old re-used assignment.');
-        $plagiarismvalues = $DB->get_records_menu('plagiarism_turnitin_config', array('cm'=>$cmid), '', 'name,value');
+        $plagiarismvalues = $DB->get_records_menu('plagiarism_turnitin_config', array('cm'=>$cm->id), '', 'name,value');
         $eventdata = new stdClass();
         $eventdata->courseid = $course->id;
         $eventdata->cmid = $cm->id;
