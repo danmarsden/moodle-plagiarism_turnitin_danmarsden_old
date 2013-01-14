@@ -1449,11 +1449,7 @@ function turnitin_create_assignment($plagiarismsettings, $plagiarismvalues, $eve
             $dtdue = strtotime('+1 year');
             $tii['dtdue'] = rawurlencode(date($turnitindateformat, $dtdue));
         }
-        if (!empty($module->preventlate)) {
-            $tii['late_accept_flag'] = 1;
-        } else {
-            $tii['late_accept_flag'] = 0;
-        }
+        $tii['late_accept_flag']  = (empty($module->preventlate) ? '1' : '0');
         if (isset($module->intro) && isset($module->introformat)) {
             $intro = '';
             switch ($module->introformat) {
@@ -1644,11 +1640,7 @@ function turnitin_update_assignment($plagiarismsettings, $plagiarismvalues, $eve
             $dtdue = strtotime('+1 year');
             $tii['dtdue'] = rawurlencode(date($turnitindateformat, $dtdue));
         }
-        if (!empty($module->preventlate)) {
-            $tii['late_accept_flag'] = 1;
-        } else {
-            $tii['late_accept_flag'] = 0;
-        }
+        $tii['late_accept_flag']  = (empty($module->preventlate) ? '1' : '0');
         if (isset($module->intro) && isset($module->introformat)) {
             $intro = '';
             switch ($module->introformat) {
