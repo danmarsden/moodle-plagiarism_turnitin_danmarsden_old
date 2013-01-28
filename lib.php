@@ -1225,28 +1225,27 @@ function turnitin_get_scores($plagiarismsettings) {
         foreach ($files as $file) {
             //set globals.
             $user = $DB->get_record('user', array('id'=>$file->userid));
-            $coursemodule = $DB->get_record('course_modules', array('id'=>$file->cm));
-            $moduletype = $DB->get_field('modules', 'name', array('id' => $coursemodule->module));
-            if ($coursemodule) {
-                $course = $DB->get_record('course', array('id'=>$coursemodule->course));
+            $cm = $DB->get_record('course_modules', array('id'=>$file->cm));
+            $moduletype = $DB->get_field('modules', 'name', array('id' => $cm->module));
+            if ($cm) {
+                $course = $DB->get_record('course', array('id'=>$cm->course));
             } else {
                 $course = false;
             }
-            if (!($user && $course && $coursemodule)) {
+            if (!($user && $course && $cm)) {
                 $DB->delete_records('plagiarism_turnitin_files', array('id' => $file->id));
                 continue;
             }
 
-            $mainteacher = $DB->get_field('plagiarism_turnitin_config', 'value', array('cm'=>$file->cm, 'name'=>'turnitin_mainteacher'));
+            $mainteacher = $DB->get_field('plagiarism_turnitin_config', 'value', array('cm'=>$cm->id, 'name'=>'turnitin_mainteacher'));
             if (!empty($mainteacher)) {
                 $tii['utp']      = TURNITIN_INSTRUCTOR;
                 $tii = turnitin_get_tii_user($tii, $mainteacher);
             } else {
                 //check if set to never display report to student - if so we need to obtain a teacher account and use it.
-                $never = $DB->get_field('plagiarism_turnitin_config', 'value', array('cm'=>$file->cm, 'name'=>'plagiarism_show_student_report'));
+                $never = $DB->get_field('plagiarism_turnitin_config', 'value', array('cm'=>$cm->id, 'name'=>'plagiarism_show_student_report'));
                 if (empty($never)) {
                     //trigger update assignment to set mainteacher.
-                    $cm = $DB->get_record('course_modules', array('id' => $file->cm));
                     $plagiarismvalues = $DB->get_records_menu('plagiarism_turnitin_config', array('cm'=>$cm->id), '', 'name,value');
                     $eventdata = new stdClass();
                     $eventdata->courseid = $cm->course;
@@ -1264,9 +1263,10 @@ function turnitin_get_scores($plagiarismsettings) {
                                   "this will ensure all the correct settings have been made.");
                         continue;
                     }
+                } else {
+                    $tii['utp']      = TURNITIN_STUDENT;
+                    $tii = turnitin_get_tii_user($tii, $user);
                 }
-                $tii['utp']      = TURNITIN_STUDENT;
-                $tii = turnitin_get_tii_user($tii, $user);
             }
 
             $tii['cid']      = get_config('plagiarism_turnitin_course', $course->id);
