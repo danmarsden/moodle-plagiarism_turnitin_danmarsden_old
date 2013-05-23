@@ -1863,7 +1863,7 @@ function turnitin_get_form_elements($mform) {
     $reportgenoptions = array( 0 => get_string('reportgenimmediate', 'plagiarism_turnitin'), 1 => get_string('reportgenimmediateoverwrite', 'plagiarism_turnitin'), 2 => get_string('reportgenduedate', 'plagiarism_turnitin'));
     $excludetype = array( 0 => get_string('no'), 1 => get_string('wordcount', 'plagiarism_turnitin'), 2 => get_string('percentage', 'plagiarism_turnitin'));
 
-    $mform->addElement('header', 'plagiarismdesc');
+    $mform->addElement('header', 'plagiarismdesc', get_string('pluginname', 'plagiarism_turnitin'));
     $mform->addElement('select', 'use_turnitin', get_string("useturnitin", "plagiarism_turnitin"), $ynoptions);
     $mform->addElement('select', 'plagiarism_show_student_score', get_string("showstudentsscore", "plagiarism_turnitin"), $tiishowoptions);
     $mform->addHelpButton('plagiarism_show_student_score', 'showstudentsscore', 'plagiarism_turnitin');
@@ -1891,6 +1891,7 @@ function turnitin_get_form_elements($mform) {
     $mform->addElement('select', 'plagiarism_exclude_matches', get_string("excludematches", "plagiarism_turnitin"), $excludetype);
     $mform->addHelpButton('plagiarism_exclude_matches', 'excludematches', 'plagiarism_turnitin');
     $mform->addElement('text', 'plagiarism_exclude_matches_value', '');
+    $mform->SetType('plagiarism_exclude_matches_value', PARAM_INT);
     $mform->addRule('plagiarism_exclude_matches_value', null, 'numeric', null, 'client');
     $mform->disabledIf('plagiarism_exclude_matches_value', 'plagiarism_exclude_matches', 'eq', 0);
     $mform->addElement('select', 'plagiarism_anonymity', get_string("anonymity", "plagiarism_turnitin"), $ynoptions);
