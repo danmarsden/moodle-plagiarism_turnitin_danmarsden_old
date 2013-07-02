@@ -1498,26 +1498,10 @@ function turnitin_create_assignment($plagiarismsettings, $plagiarismvalues, $eve
         $tii['fcmd'] = TURNITIN_RETURN_XML;
         $tii['assignid'] = "a_".time().rand(10, 5000); // some unique random id only used once for initial creation
         $tii['assign'] = turnitin_get_assign_name($module->name, $cm->id); //assignment used on Turnitin
-        $turnitindateformat = 'Y-m-d H:i:s';
-        // possibly imported/restored with dates in past, why would dates be set in past, failed event?
-        if (!empty($module->timeavailable) && ($module->timeavailable > strtotime('+10 minutes'))) {
-            $dtstart = $module->timeavailable;
-            $tii['dtstart'] = rawurlencode(date($turnitindateformat, $dtstart));
-        } else {
-            $dtstart = strtotime('+10 minutes');
-            $tii['dtstart'] = rawurlencode(date($turnitindateformat, $dtstart));
-        }
-        if (!empty($module->timedue) && ($module->timedue > strtotime('+10 minutes'))) {
-            $dtdue = $module->timedue;
-            $tii['dtdue'] = rawurlencode(date($turnitindateformat, $dtdue));
-        } else if (!empty($module->duedate) && ($module->duedate > strtotime('+10 minutes'))) {
-            $dtdue = $module->duedate;
-            $tii['dtdue'] = rawurlencode(date($turnitindateformat, $dtdue));
-        } else {
-            $dtdue = strtotime('+1 year');
-            $tii['dtdue'] = rawurlencode(date($turnitindateformat, $dtdue));
-        }
-        $tii['late_accept_flag']  = (empty($module->preventlate) ? '1' : '0');
+
+        // Get the time start and time due details from the modules.
+        $tii = turnitin_get_module_dates($module, $tii, $dtstart); // NOTE: $dtstart passed by ref.
+
         if (isset($module->intro) && isset($module->introformat)) {
             $intro = '';
             switch ($module->introformat) {
@@ -1690,25 +1674,10 @@ function turnitin_update_assignment($plagiarismsettings, $plagiarismvalues, $eve
         } else {
             $tii['assign'] = $plagiarismvalues['turnitin_assign'];
         }
-        $turnitindateformat = 'Y-m-d H:i:s';
-        if (!empty($module->timeavailable) && ($module->timeavailable > strtotime('+10 minutes'))) {
-            $dtstart = $module->timeavailable;
-            $tii['dtstart'] = rawurlencode(date($turnitindateformat, $dtstart));
-        } else {
-            $dtstart = strtotime('+10 minutes');
-            $tii['dtstart'] = rawurlencode(date($turnitindateformat, $dtstart));
-        }
-        if (!empty($module->timedue) && ($module->timedue > strtotime('+10 minutes'))) {
-            $dtdue = $module->timedue;
-            $tii['dtdue'] = rawurlencode(date($turnitindateformat, $dtdue));
-        } else if (!empty($module->duedate) && ($module->duedate > strtotime('+10 minutes'))) {
-            $dtdue = $module->duedate;
-            $tii['dtdue'] = rawurlencode(date($turnitindateformat, $dtdue));
-        } else {
-            $dtdue = strtotime('+1 year');
-            $tii['dtdue'] = rawurlencode(date($turnitindateformat, $dtdue));
-        }
-        $tii['late_accept_flag']  = (empty($module->preventlate) ? '1' : '0');
+
+        // Get the time start and time due details from the modules.
+        $tii = turnitin_get_module_dates($module, $tii, $dtstart); // NOTE: $dtstart passed by ref.
+
         if (isset($module->intro) && isset($module->introformat)) {
             $intro = '';
             switch ($module->introformat) {
@@ -2145,4 +2114,45 @@ function check_event_handlers() {
         $invalidhandlers[] = $handler; //this function can't be found.
     }
     return $invalidhandlers;
+}
+
+function turnitin_get_module_dates($module, $tii, &$timestart) {
+    $turnitindateformat = 'Y-m-d H:i:s';
+    if (!empty($module->timeavailable)) {
+        $timestart = $module->timeavailable; // mod_assignment and others use this format.
+    } else if (!empty($module->allowsubmissionsfromdate)) {
+        $timestart = $module->allowsubmissionsfromdate; // mod_assign uses this format.
+    }
+
+    // Possibly imported/restored with dates in past, why would dates be set in past, failed event?
+    //TODO: this looks like bad handling - some dates in past for updateds will be correct!
+    if (!empty($timestart) && ($timestart > strtotime('+10 minutes'))) {
+        $tii['dtstart'] = rawurlencode(date($turnitindateformat, $timestart));
+    } else {
+        // Turnitin API doesn't like start dates in the past - set it to now +10 minutes.
+        $timestart = strtotime('+10 minutes');
+        $tii['dtstart'] = rawurlencode(date($turnitindateformat, $timestart));
+    }
+
+    // Now handle end date.
+    $tii['late_accept_flag']  = 1; // Set default to allow late submissions.
+    $timedue = '';
+    if (!empty($module->timedue)) {
+        $timedue = $module->timedue; // mod_assignment and others use this format.
+        $tii['late_accept_flag']  = (empty($module->preventlate) ? '1' : '0'); // mod_assignment stores in preventlate.
+    } else if (!empty($module->cutoffdate)) {
+        $timedue = $module->cutoffdate; // mod_assign uses this format.
+        // This is a mod_assign and cutoffdate prevents late acceptance so set it here.
+        $tii['late_accept_flag']  = 0;
+    } else if (!empty($module->duedate)) {
+        $timedue = $module->duedate; // mod_assign uses this format when not using cutoffdate.
+    }
+
+    if (!empty($timedue) && ($timedue > strtotime('+10 minutes'))) {
+        $tii['dtdue'] = rawurlencode(date($turnitindateformat, $timedue));
+    } else {
+        $dtdue = strtotime('+6 months');
+        $tii['dtdue'] = rawurlencode(date($turnitindateformat, $dtdue));
+    }
+    return $tii;
 }
