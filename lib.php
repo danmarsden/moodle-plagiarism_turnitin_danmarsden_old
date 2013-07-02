@@ -274,10 +274,17 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
      */
     public function get_form_elements_module($mform, $context, $modulename = "") {
         global $CFG, $DB;
-        if (!$this->get_settings()) {
+        $plagiarismsettings = $this->get_settings();
+        if (!$plagiarismsettings) {
             return;
         }
-        $cmid = optional_param('update', 0, PARAM_INT); //there doesn't seem to be a way to obtain the current cm a better way - $this->_cm is not available here.
+        $cmid = optional_param('update', 0, PARAM_INT); // There doesn't seem to be a way to obtain the current cm a better way - $this->_cm is not available here.
+        if (!empty($modulename)) {
+            $modname = 'turnitin_enable_' . $modulename;
+            if (empty($plagiarismsettings[$modname])) {
+                return; // return if Turnitin is not enabled for the module.
+            }
+        }
         if (!empty($cmid)) {
             $plagiarismvalues = $DB->get_records_menu('plagiarism_turnitin_config', array('cm'=>$cmid), '', 'name,value');
         }

@@ -37,6 +37,7 @@ $PAGE->set_url('/plagiarism/turnitin/migrateassignment22.php');
 
 echo $OUTPUT->header();
 echo $OUTPUT->notification("NASTY HACK ALERT - this script is a nasty hack that uses the logs table to translate old assignment ids to new 2.3 assignment ids - use at own risk!!!!");
+echo $OUTPUT->notification("THIS SCRIPT IS NOT COMPLETE - the files hashes still point to the old 2.2 path - a script needs to be written to translate the old hash into the new path hash so that similarity score links will be maintained.");
 $currenttab='turnitinmigrate';
 require_once('turnitin_tabs.php');
 

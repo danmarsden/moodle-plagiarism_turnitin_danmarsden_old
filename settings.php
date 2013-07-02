@@ -58,6 +58,14 @@ if (($data = $mform->get_data()) && confirm_sesskey()) {
     if (!isset($data->turnitin_senduseremail)) {
         $data->turnitin_senduseremail = 0;
     }
+    $mods = get_plugin_list('mod');
+    foreach ($mods as $mod => $modname) {
+        if (plugin_supports('mod', $mod, FEATURE_PLAGIARISM)) {
+            if (!isset($data->{'turnitin_enable_mod_'.$mod})) {
+                $data->{'turnitin_enable_mod_'.$mod} = 0;
+            }
+        }
+    }
     foreach ($data as $field => $value) {
         if (strpos($field, 'turnitin')===0) {
             if ($tiiconfigfield = $DB->get_record('config_plugins', array('name'=>$field, 'plugin'=>'plagiarism'))) {

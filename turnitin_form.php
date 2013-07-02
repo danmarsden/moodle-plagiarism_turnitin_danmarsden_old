@@ -31,14 +31,17 @@ class turnitin_setup_form extends moodleform {
         $mform->addHelpButton('turnitin_api', 'tiiapi', 'plagiarism_turnitin');
         $mform->addRule('turnitin_api', null, 'required', null, 'client');
         $mform->setDefault('turnitin_api', 'https://api.turnitin.com/api.asp');
+        $mform->setType('turnitin_api', PARAM_URL);
 
         $mform->addElement('text', 'turnitin_accountid', get_string('tiiaccountid', 'plagiarism_turnitin'));
         $mform->addHelpButton('turnitin_accountid', 'tiiaccountid', 'plagiarism_turnitin');
         $mform->addRule('turnitin_accountid', null, 'numeric', null, 'client');
+        $mform->setType('turnitin_accountid', PARAM_ALPHANUMEXT);
 
         $mform->addElement('passwordunmask', 'turnitin_secretkey', get_string('tiisecretkey', 'plagiarism_turnitin'));
         $mform->addHelpButton('turnitin_secretkey', 'tiisecretkey', 'plagiarism_turnitin');
         $mform->addRule('turnitin_secretkey', null, 'required', null, 'client');
+        $mform->setType('turnitin_secretkey', PARAM_TEXT);
 
         $mform->addElement('checkbox', 'turnitin_enablegrademark', get_string('tiienablegrademark', 'plagiarism_turnitin'));
         $mform->addHelpButton('turnitin_enablegrademark', 'tiienablegrademark', 'plagiarism_turnitin');
@@ -52,16 +55,27 @@ class turnitin_setup_form extends moodleform {
         $mform->addElement('text', 'turnitin_attemptcodes', get_string('turnitin_attemptcodes', 'plagiarism_turnitin'));
         $mform->addHelpButton('turnitin_attemptcodes', 'turnitin_attemptcodes', 'plagiarism_turnitin');
         $mform->setDefault('turnitin_attemptcodes', '1009,1013,1023');
+        $mform->setType('turnitin_attemptcodes', PARAM_SEQUENCE);
 
         $mform->addElement('text', 'turnitin_attempts', get_string('turnitin_attempts', 'plagiarism_turnitin'));
         $mform->addHelpButton('turnitin_attempts', 'turnitin_attempts', 'plagiarism_turnitin');
         $mform->addRule('turnitin_attempts', null, 'numeric', null, 'client');
         $mform->addRule('turnitin_attempts', null, 'maxlength', 1, 'client');
         $mform->setDefault('turnitin_attempts', '1');
+        $mform->setType('turnitin_attempts', PARAM_INT);
 
         $mform->addElement('textarea', 'turnitin_student_disclosure', get_string('studentdisclosure', 'plagiarism_turnitin'), 'wrap="virtual" rows="6" cols="50"');
         $mform->addHelpButton('turnitin_student_disclosure', 'studentdisclosure', 'plagiarism_turnitin');
         $mform->setDefault('turnitin_student_disclosure', get_string('studentdisclosuredefault', 'plagiarism_turnitin'));
+        $mform->setType('turnitin_student_disclosure', PARAM_TEXT);
+
+        $mods = get_plugin_list('mod');
+        foreach ($mods as $mod => $modname) {
+            if (plugin_supports('mod', $mod, FEATURE_PLAGIARISM)) {
+                $modstring = 'turnitin_enable_mod_' . $mod;
+                $mform->addElement('checkbox', $modstring, get_string('turnitin_enableplugin', 'plagiarism_turnitin', $mod));
+            }
+        }
 
         $this->add_action_buttons(true);
     }
