@@ -2149,7 +2149,7 @@ function turnitin_get_module_dates($module, $tii, &$timestart) {
         $timedue = $module->duedate; // mod_assign uses this format when not using cutoffdate.
     }
 
-    if (!empty($timedue) && ($timedue > strtotime('+10 minutes'))) {
+    if (!empty($timedue) && ($timedue > strtotime('+10 minutes')) && $timedue > $timestart) {
         $tii['dtdue'] = rawurlencode(date($turnitindateformat, $timedue));
     } else {
         $dtdue = strtotime('+6 months');
