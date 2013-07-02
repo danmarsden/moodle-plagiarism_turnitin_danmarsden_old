@@ -98,6 +98,7 @@ $string['turnitin_attempts'] = 'Number of Retries';
 $string['turnitin_attempts_help'] = 'Number of times the codes specified are resubmitted to Turnitin, 1 retry means files with the specified error codes will be submitted twice.';
 $string['turnitin_attemptcodes'] = 'Error Codes to auto-resubmit';
 $string['turnitin_attemptcodes_help'] = 'Error codes that Turnitin usually accepts on a 2nd attempt (Changes to this field may cause further load on your server)';
+$string['turnitin_enableplugin'] = 'Enable Turnitin for {$a}';
 $string['turnitin_institutionnode'] = 'Enable Institution Node';
 $string['turnitin_institutionnode_help'] = 'If you have setup/purchased an institution node with your account enable this to allow the node to be selected when creating assignments. NOTE: if you do not have an institution node, enabling this setting will cause your paper submission to fail.';
 $string['useturnitin'] ='Enable Turnitin';
