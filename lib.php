@@ -717,7 +717,7 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
             		$fileresult = true; //file already been sent.
             	}
             	$result = $result && $fileresult;
-            	//unlink($file->filepath); //delete temp file.
+            	unlink($file->filepath); //delete temp file.
             }
             // Normal scenario - this is an upload event with one or more attached files
             // Attached file(s) are to be immediately submitted to TII
