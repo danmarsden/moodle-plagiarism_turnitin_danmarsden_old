@@ -1018,8 +1018,12 @@ function turnitin_post_data($tii, $plagiarismsettings, $file='', $pid='') {
             fwrite($fh, $filecontents);
             fclose($fh);
             $fields['pdata'] = '@'.$filename;
-            $c = new curl(array('proxy'=>true));
-            $status = new SimpleXMLElement($c->post($url, $fields));
+            try {
+                $c = new curl(array('proxy'=>true));
+                $status = new SimpleXMLElement($c->post($url, $fields));
+            } catch (Exception $e) {
+                $status = false;
+            }
             unlink($filename);
         }
     } else {
