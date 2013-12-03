@@ -1230,6 +1230,9 @@ function turnitin_send_file($pid, $plagiarismsettings, $file) {
     $tii['pln']     = $tii['uln'];
     //$tii['diagnostic'] = '1';
     $tiixml = turnitin_post_data($tii, $plagiarismsettings, $file, $pid);
+    if ($tiixml === false) {
+        return false;
+    }
 
     if (isset($tiixml->rcode[0])) {
         turnitin_update_file_status_code($pid, $tiixml->rcode[0]);
@@ -1543,7 +1546,8 @@ function turnitin_create_assignment($plagiarismsettings, $plagiarismvalues, $eve
         $tii['anon'] = (empty($plagiarismvalues['plagiarism_anonymity']) ? '0' : '1');
         // send request to Turnitin
         $tiixml = turnitin_post_data($tii, $plagiarismsettings);
-        if ($tiixml->rcode[0] == TURNITIN_RESP_ASSIGN_CREATED && !empty($tiixml->assignmentid[0])) {
+
+        if ($tiixml !== false && $tiixml->rcode[0] == TURNITIN_RESP_ASSIGN_CREATED && !empty($tiixml->assignmentid[0])) {
             // save this teacher as the "main" teacher account for this assignment, use this teacher when retrieving reports:
             if (!$DB->record_exists('plagiarism_turnitin_config', array('cm'=>$cm->id, 'name'=>'turnitin_mainteacher'))){
                 $configval = new stdClass();
@@ -1719,7 +1723,7 @@ function turnitin_update_assignment($plagiarismsettings, $plagiarismvalues, $eve
         $tii['anon'] = (empty($plagiarismvalues['plagiarism_anonymity']) ? '0' : '1');
         // send request to Turnitin
         $tiixml = turnitin_post_data($tii, $plagiarismsettings);
-        if ($tiixml->rcode[0] == TURNITIN_RESP_ASSIGN_MODIFIED) {
+        if ($tiixml !== false && $tiixml->rcode[0] == TURNITIN_RESP_ASSIGN_MODIFIED) {
             if (!empty($tii['newassign'])) { // new to update assign
                 $DB->set_field('plagiarism_turnitin_config', 'value', $tii['newassign'], array('cm'=>$cm->id, 'name'=>'turnitin_assign'));
             }
