@@ -286,7 +286,8 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
         if (has_capability('plagiarism/turnitin:enable', $context)) {
             turnitin_get_form_elements($mform);
             if ($mform->elementExists('plagiarism_draft_submit')) {
-                $mform->disabledIf('plagiarism_draft_submit', 'var4', 'eq', 0);
+                // Disable draft submission option if drafts are not enabled.
+                $mform->disabledIf('plagiarism_draft_submit', 'submissiondrafts', 'eq', 0);
             }
             //disable all plagiarism elements if use_plagiarism eg 0
             foreach ($plagiarismelements as $element) {
@@ -1869,7 +1870,8 @@ function turnitin_get_form_elements($mform) {
     $mform->addHelpButton('plagiarism_show_student_score', 'showstudentsscore', 'plagiarism_turnitin');
     $mform->addElement('select', 'plagiarism_show_student_report', get_string("showstudentsreport", "plagiarism_turnitin"), $tiishowoptions);
     $mform->addHelpButton('plagiarism_show_student_report', 'showstudentsreport', 'plagiarism_turnitin');
-    if ($mform->elementExists('var4')) {
+    if ($mform->elementExists('submissiondrafts')) {
+        // This appears to be the mod/assign form, so add the draft submission option.
         $mform->addElement('select', 'plagiarism_draft_submit', get_string("draftsubmit", "plagiarism_turnitin"), $tiidraftoptions);
     }
     $mform->addElement('select', 'plagiarism_compare_student_papers', get_string("comparestudents", "plagiarism_turnitin"), $ynoptions);
