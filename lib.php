@@ -82,6 +82,7 @@ define('TURNITIN_RESP_SCORE_OBJECT_NOT_FOUND', 212); //Assignment object not fou
 define('TURNITIN_RESP_ASSIGN_EXISTS', 419); // Assignment already exists.
 define('TURNITIN_RESP_SCORE_NOT_READY', 415);
 define('TURNITIN_RESP_LATE_ACCEPT', 1000);
+define('TURNITIN_RESP_TOOBIG', 1007); // File size is too big.
 
 //get global class
 global $CFG;
@@ -1122,6 +1123,18 @@ function turnitin_send_file($pid, $plagiarismsettings, $file) {
         return true; // Do not reattempt - no hope of success.
     }
 
+    // Check filesize is valid - if over 21MB don't send to Turnitin
+    // Turnitin currently only processes files that are 20MB or less and massive files cause a major failure.
+    // files that are just over the limit return a 1007 error.
+    // We set this to be slightly higher than what Turnitin usually accepts and allow turnitin api to return a failure for files
+    // slightly over the limit.
+    if ($file->get_filesize() > 22020096) { // 21MB - (turnitin correctly error for files slightly over 20MB but massive failure for larger files.
+        $plagiarism_file->statuscode = TURNITIN_RESP_TOOBIG;
+        if (! $DB->update_record('plagiarism_turnitin_files', $plagiarism_file)) {
+            debugging("Error updating turnitin_files record");
+        }
+        return true; // Do not reattempt.
+    }
     //check that course and assignment have both been created correctly.
     $tiicid = get_config('plagiarism_turnitin_course', $course->id);
     $params = array('cm' => $cm->id, 'name' => 'turnitin_assignid');
