@@ -666,7 +666,7 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
                 return false;
             }
 
-            if (empty($eventdata->pathnamehashes) && $eventdata->eventtype=="file_done") {
+            if (empty($eventdata->pathnamehashes) && ($eventdata->eventtype=="file_done" || $eventdata->eventtype == 'assessable_submitted')) {
                 // There are no files attached to this 'fileuploaded' event.
                 // This is a 'finalize' event - assignment-focused functionality
                 mtrace("finalise");
@@ -678,12 +678,24 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
                     require_once("$CFG->dirroot/mod/$modulename/lib.php");
                     // we need to get a list of files attached to this assignment and put them in an array, so that
                     // we can submit each of them for processing.
-                    $assignmentbase = new assignment_base($cmid);
-                    $submission = $assignmentbase->get_submission($eventdata->userid);
-                    $modulecontext = get_context_instance(CONTEXT_MODULE, $eventdata->cmid);
+
+                    if ($modulename == 'assignment') {
+                        $assignmentbase = new assignment_base($cmid);
+                        $submission = $assignmentbase->get_submission($eventdata->userid);
+                        $component = 'mod_assignment';
+                        $filearea = 'submission';
+                    } else {
+                        $context = context_module::instance($cmid);
+                        $course = $DB->get_record('course', array('id' => $cm->course), '*', MUST_EXIST);
+                        $assign = new assign($context,$cm,$course);
+                        $submission = $assign->get_user_submission($eventdata->userid, false);
+                        $component = 'assignsubmission_file';
+                        $filearea = 'submission_files';
+                    }
+                    $modulecontext = get_context_instance(CONTEXT_MODULE, $cmid);
                     $fs = get_file_storage();
-                    $files = $fs->get_area_files($modulecontext->id, 'mod_'.$modulename,
-                                                 'submission', $submission->id, "timemodified", false);
+                    $files = $fs->get_area_files($modulecontext->id, $component,
+                                                 $filearea, $submission->id, "timemodified", false);
                     if ($files) {
                         mtrace("files");
                         foreach ($files as $file) {
