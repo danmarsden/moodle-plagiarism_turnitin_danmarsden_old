@@ -65,7 +65,7 @@ function xmldb_plagiarism_turnitin_upgrade($oldversion) {
                 $DB->delete_records('turnitin_files', array('id' => $turnitinfile->id));
                 continue;
             }
-            $modulecontext = get_context_instance(CONTEXT_MODULE, $coursemodule->id);
+            $modulecontext = context_module::instance($coursemodule->id);
             if (!$modulecontext) {
                 $DB->delete_records('turnitin_files', array('id' => $turnitinfile->id));
                 continue;

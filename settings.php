@@ -31,7 +31,7 @@ require_once($CFG->dirroot.'/plagiarism/turnitin/lib.php');
 require_login();
 admin_externalpage_setup('plagiarismturnitin');
 
-$context = get_context_instance(CONTEXT_SYSTEM);
+$context = context_system::instance();
 
 require_capability('moodle/site:config', $context, $USER->id, true, "nopermissions");
 
@@ -71,7 +71,7 @@ if (($data = $mform->get_data()) && confirm_sesskey()) {
             if ($tiiconfigfield = $DB->get_record('config_plugins', array('name'=>$field, 'plugin'=>'plagiarism'))) {
                 $tiiconfigfield->value = $value;
                 if (! $DB->update_record('config_plugins', $tiiconfigfield)) {
-                    error("errorupdating");
+                    print_error("errorupdating");
                 }
             } else {
                 $tiiconfigfield = new stdClass();
@@ -79,7 +79,7 @@ if (($data = $mform->get_data()) && confirm_sesskey()) {
                 $tiiconfigfield->plugin = 'plagiarism';
                 $tiiconfigfield->name = $field;
                 if (! $DB->insert_record('config_plugins', $tiiconfigfield)) {
-                    error("errorinserting");
+                    print_error("errorinserting");
                 }
             }
         }
@@ -151,7 +151,7 @@ if ($dbman->table_exists($table) && $dbman->table_exists($table2)) {
                 $newf->cm = $cm->id;
                 //now get the pathnamehash for this old file
                 //first get all the files from the assignment module.
-                $modulecontext = get_context_instance(CONTEXT_MODULE, $cm->id);
+                $modulecontext = context_module::instance($cm->id);
                 $submission = $DB->get_record('assignment_submissions', array('assignment'=>$tf->instance, 'userid'=>$tf->userid));
                 $files = $fs->get_area_files($modulecontext->id, 'mod_assignment', 'submission', $submission->id);
                 foreach ($files as $file) {
