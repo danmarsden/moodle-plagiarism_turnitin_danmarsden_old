@@ -188,7 +188,7 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
             return false;
         }
 
-        $modulecontext = get_context_instance(CONTEXT_MODULE, $cmid);
+        $modulecontext = context_module::instance($cmid);
 
         // Whether the user has permissions to see all items in the context of this module.
         $viewsimilarityscore = has_capability('plagiarism/turnitin:viewsimilarityscore', $modulecontext);
@@ -693,7 +693,7 @@ class plagiarism_plugin_turnitin extends plagiarism_plugin {
                         $component = 'assignsubmission_file';
                         $filearea = 'submission_files';
                     }
-                    $modulecontext = get_context_instance(CONTEXT_MODULE, $cmid);
+                    $modulecontext = context_module::instance($cmid);
                     $fs = get_file_storage();
                     $files = $fs->get_area_files($modulecontext->id, $component,
                                                  $filearea, $submission->id, "timemodified", false);
@@ -1825,7 +1825,7 @@ function turnitin_get_grademark_link($plagiarismfile, $course, $module, $plagiar
         $coursemodule = $DB->get_record('course_modules', array('id' => $plagiarismfile->cm));
         $moduletype = $DB->get_field('modules', 'name', array('id' => $coursemodule->module));
         $tii = array();
-        if (!has_capability("mod/$moduletype:grade", get_context_instance(CONTEXT_MODULE, $plagiarismfile->cm))) {
+        if (!has_capability("mod/$moduletype:grade", context_module::instance($plagiarismfile->cm))) {
             $tii['utp']      = TURNITIN_STUDENT;
             $tii = turnitin_get_tii_user($tii, $USER);
         } else {
@@ -1926,7 +1926,7 @@ function turnitin_get_report_link($file, $course, $plagiarismsettings) {
     $moduletype = $DB->get_field('modules', 'name', array('id' => $coursemodule->module));
 
     $tii = array();
-    if (!has_capability("mod/$moduletype:grade", get_context_instance(CONTEXT_MODULE, $file->cm))) {
+    if (!has_capability("mod/$moduletype:grade", context_module::instance($file->cm))) {
         $tii['utp']      = TURNITIN_STUDENT;
     } else {
         $tii['utp']      = TURNITIN_INSTRUCTOR;

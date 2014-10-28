@@ -61,7 +61,7 @@ if ($resetuser==1 && $id) {
               WHERE m.id=cm.module AND cm.id=t.cm AND t.userid=u.id AND t.id = ?";
     $tfile = $DB->get_record_sql($sqlid, array('id'=>$id));
     $tfile->statuscode = 'pending';
-    $modulecontext = get_context_instance(CONTEXT_MODULE, $tfile->cm);
+    $modulecontext = context_module::instance($tfile->cm);
     if ($tfile->moduletype == 'assignment' or $tfile->moduletype == 'assign') {
         $fs = get_file_storage();
         if ($tfile->moduletype =='assignment') {
@@ -151,7 +151,7 @@ $table->head[] = '';
 $table->width = "95%";
 $fs = get_file_storage();
 foreach ($turnitin_files as $tf) {
-    $modulecontext = get_context_instance(CONTEXT_MODULE, $tf->cm);
+    $modulecontext = context_module::instance($tf->cm);
     $coursemodule = get_coursemodule_from_id($tf->moduletype, $tf->cm);
     $file = $fs->get_file_by_hash($tf->identifier);
     if ($file && ($tf->moduletype == 'assignment' || $tf->moduletype == 'assign')) {
