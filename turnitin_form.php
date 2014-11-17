@@ -67,7 +67,7 @@ class turnitin_setup_form extends moodleform {
         $mform->addElement('textarea', 'turnitin_student_disclosure', get_string('studentdisclosure', 'plagiarism_turnitin'), 'wrap="virtual" rows="6" cols="50"');
         $mform->addHelpButton('turnitin_student_disclosure', 'studentdisclosure', 'plagiarism_turnitin');
         $mform->setDefault('turnitin_student_disclosure', get_string('studentdisclosuredefault', 'plagiarism_turnitin'));
-        $mform->setType('turnitin_student_disclosure', PARAM_TEXT);
+        $mform->setType('turnitin_student_disclosure', PARAM_CLEANHTML);
 
         $mods = get_plugin_list('mod');
         foreach ($mods as $mod => $modname) {
